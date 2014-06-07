@@ -20,11 +20,14 @@ namespace testman{
 		static public function has($name){
 			return array_key_exists($name,self::$conf);
 		}
-		static public function find_file($dir,$name){
+		static public function find_path($dir,$name){
 			$dir = str_replace('\\','/',$dir);
 			$dirnames = explode('/',$dir);
+			
 			while(!empty($dirnames)){
-				if(is_file($f='/'.implode('/',$dirnames).'/'.$name)){
+				$f = str_replace('//','/','/'.implode('/',$dirnames).'/'.$name);
+				
+				if(is_file($f) || is_dir($f)){
 					return $f;
 				}
 				array_pop($dirnames);
@@ -72,7 +75,7 @@ namespace testman{
 		static private $start_time;
 
 		static public function fixture($path){
-			if(null !== ($f = \testman\Conf::find_file($path,basename(__FILE__,'.php').'.fixture.php'))){
+			if(null !== ($f = \testman\Conf::find_path($path,basename(__FILE__,'.php').'.fixture.php'))){
 				include_once($f);
 				return true;
 			}
@@ -1164,14 +1167,33 @@ namespace{
 		ob_end_clean();
 	}
 	
-	$testpath = realpath(\testman\Args::value(getcwd()));
+	$testpath = realpath(\testman\Args::value(getcwd().'/test'));
 	if($testpath === false){
 		die(\testman\Args::value().' found'.PHP_EOL);
 	}
-	if(null !== ($f = \testman\Conf::find_file($testpath,basename(__FILE__,'.php').'.lib.php'))){
-		include_once($f);
+	// TODO
+	if(null !== ($dir = \testman\Conf::find_path($testpath,basename(__FILE__,'.php').'.lib'))){
+		if(is_dir($dir) && strpos(get_include_path(),$dir) === false){
+			set_include_path($dir.PATH_SEPARATOR.get_include_path());
+
+			spl_autoload_register(function($c){
+				if(!empty($c)){
+					$cp = str_replace('\\','/',(($c[0] == '\\') ? substr($c,1) : $c));
+					foreach(explode(PATH_SEPARATOR,get_include_path()) as $p){
+						if(!empty($p) && ($r = realpath($p)) !== false && is_file($p.'/'.$cp.'.php')){
+							require_once($f);
+								
+							if(class_exists($c,false) || interface_exists($c,false) || trait_exists($c,false)){
+								return true;
+							}
+						}
+					}
+				}
+				return false;
+			},true,false);
+		}
 	}
-	if(null !== ($f = \testman\Conf::find_file($testpath,basename(__FILE__,'.php').'.conf.php'))){
+	if(null !== ($f = \testman\Conf::find_path($testpath,basename(__FILE__,'.php').'.conf.php'))){
 		$conf = include($f);
 		if(!is_array($conf)) throw new \RuntimeException('invalid '.$f);
 		foreach($conf as $k => $v){
@@ -1206,12 +1228,12 @@ namespace{
 		foreach(new \RegexIterator(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($testpath,
 				\FilesystemIterator::CURRENT_AS_FILEINFO|\FilesystemIterator::SKIP_DOTS|\FilesystemIterator::UNIX_PATHS
 		),\RecursiveIteratorIterator::SELF_FIRST),'/\.php$/') as $f){
-			if(!preg_match('/\/[\.\_]/',$f->getPathname()) && strpos($f->getFilename(),basename(__FILE__,'.php').'.') === false){
-				$test_list[$f->getPathname()] = 1;
+			if(!preg_match('/\/[\.\_]/',$f->getPathname()) && strpos($f->getPathname(),basename(__FILE__,'.php').'.') === false){
+				$test_list[$f->getPathname()] = true;
 			}
 		}
 	}else if(is_file($testpath)){
-		$test_list[realpath($testpath)] = 1;
+		$test_list[realpath($testpath)] = true;
 	}else{
 		throw new \InvalidArgumentException($testpath.' not');
 	}
@@ -1226,6 +1248,8 @@ namespace{
 
 	$start_time = microtime(true);
 	$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
+	
+// TODO
 	foreach($test_list as $test_path){
 		print("/\033[1D");
 		$status = \testman\Runner::exec($test_path);
