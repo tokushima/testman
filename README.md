@@ -1,5 +1,5 @@
 #testman.php
-=====
+
 (PHP 5 >= 5.3.0)
 
 ##Quick test
