@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 /**
  * Testing Framework
@@ -1157,21 +1158,22 @@ namespace{
 		$println('Options:');
 		$println('  -c|--coverage <file>   Generate code coverage report in XML format.');
 		$println('  -o|--output <file>     Log test execution in XML format to file');
-		$println('  --d <dir>         Library path of coverage.');
 		exit;
 	}
 	
-	if(is_file($f=getcwd().'/bootstrap.php') || is_file($f=getcwd().'/vendor/autoload.php')){
+	$intest = (basename(getcwd()) == 'test');
+	$cwd = ($intest) ? dirname(getcwd()) : getcwd();
+	
+	if(is_file($f=$cwd.'/bootstrap.php') || is_file($f=$cwd.'/vendor/autoload.php')){
 		ob_start();
 			include_once($f);
 		ob_end_clean();
 	}
 	
-	$testpath = realpath(\testman\Args::value(getcwd().'/test'));
+	$testpath = realpath(\testman\Args::value($cwd.'/test'));
 	if($testpath === false){
 		die(\testman\Args::value().' found'.PHP_EOL);
 	}
-	// TODO
 	if(null !== ($dir = \testman\Conf::find_path($testpath,basename(__FILE__,'.php').'.lib'))){
 		if(is_dir($dir) && strpos(get_include_path(),$dir) === false){
 			set_include_path($dir.PATH_SEPARATOR.get_include_path());

@@ -1,0 +1,13 @@
+{
+    "name": "tokushima/testman",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "tokushima"
+        }
+    ],
+	"require": {
+		"php": ">=5.3.0"
+	},
+	"bin": ["cmdman.php"]
+}
