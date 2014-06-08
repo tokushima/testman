@@ -1206,8 +1206,6 @@ namespace{
 		}
 	}
 	$println('Progress:','1;33');
-	
-
 
 	$tab = '  ';
 	$success = $fail = $exception = $exe_time = $use_memory = 0;
@@ -1249,7 +1247,6 @@ namespace{
 	$start_time = microtime(true);
 	$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
 	
-// TODO
 	foreach($test_list as $test_path){
 		print("/\033[1D");
 		$status = \testman\Runner::exec($test_path);
