@@ -2,6 +2,9 @@
 
 (PHP 5 >= 5.3.0)
 
+![my image](testman.png)
+
+
 ##Quick test
 
 	$ php testman.php <path>
@@ -40,7 +43,4 @@
 
 	CURLOPT_SSL_VERIFYHOST
 
-
-
-![my image](testman.png)
 
