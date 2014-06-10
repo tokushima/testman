@@ -1017,7 +1017,8 @@ namespace testman{
 	}
 }
 namespace{
-	if(count(debug_backtrace(false)) > 0){
+	$trace = debug_backtrace(false);
+	if(count($trace) > 0 && (!isset($trace[0]['file']) || strpos($trace[0]['file'],__DIR__.DIRECTORY_SEPARATOR.'bin') !== 0)){
 		$key = \testman\Coverage::link();
 		$linkvars = isset($_POST[$key]) ? $_POST[$key] : (isset($_GET[$key]) ? $_GET[$key] : array());
 		if(isset($_POST[$key])) unset($_POST[$key]);
