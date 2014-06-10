@@ -42,5 +42,5 @@
 
 
 
-![my image](testman.jpg)
+![my image](testman.png)
 
