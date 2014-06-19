@@ -1,17 +1,19 @@
-#testman.php
+#testman
 
 (PHP 5 >= 5.3.0)
 
 ![my image](testman.png)
 
+##Download
+	$ curl -LO http://git.io/testman.phar
 
 ##Quick test
 
-	$ php testman.php <path>
+	$ php testman.phar <path>
 
 ##Code Coverage Analysis
 
-	$ php testman.php <path> --coverage <file>
+	$ php testman.phar <path> --coverage <file>
 
 
 ##Options
