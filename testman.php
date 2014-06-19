@@ -1018,12 +1018,17 @@ namespace testman{
 }
 namespace{
 	$trace = debug_backtrace(false);
-	if(count($trace) > 0 && (!isset($trace[0]['file']) || strpos($trace[0]['file'],__DIR__.DIRECTORY_SEPARATOR.'bin') !== 0)){
+	if(count($trace) > 0 
+		&& (
+			!isset($trace[0]['file']) || 
+			!(strpos($trace[0]['file'],__DIR__.DIRECTORY_SEPARATOR.'bin') === 0 || substr($trace[0]['file'],-5) == '.phar')
+		)
+	){
 		$key = \testman\Coverage::link();
 		$linkvars = isset($_POST[$key]) ? $_POST[$key] : (isset($_GET[$key]) ? $_GET[$key] : array());
 		if(isset($_POST[$key])) unset($_POST[$key]);
 		if(isset($_GET[$key])) unset($_GET[$key]);
-		
+
 		if(function_exists('xdebug_get_code_coverage') && isset($linkvars['savedb'])){
 			register_shutdown_function(function() use($linkvars){
 				register_shutdown_function(function() use($linkvars){
