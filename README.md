@@ -4,19 +4,19 @@
 
 ![my image](testman.png)
 
-##Download
+#Download
 	$ curl -LO http://git.io/testman.phar
 
-##Quick test
+#Quick test
 
 	$ php testman.phar <path>
 
-##Code Coverage Analysis
+#Code Coverage Analysis
 
 	$ php testman.phar <path> --coverage <file>
 
 
-##Options
+#Options
 \--coverage <file>
 
 \-c
@@ -45,9 +45,34 @@
 
 	CURLOPT_SSL_VERIFYHOST
 
+#Config script file
+
+##test/testman.conf.php
+
+	[sample]
+		<?php
+		return array(
+			'urls'=>\ebi\Dt::get_urls(),
+			'outputdir'=>dirname(__DIR__).'/work/test_output',
+			'ssl_verify'=>false,
+			'libdir'=>dirname(__DIR__).'/src'
+		);
+
+#Fixture of the test
+	##test/testman.fixture.php
+	
+	[sample]
+	<?php
+	\ebi\Dt::setup();
+	\ebi\SmtpBlackholeDao::create_table();
+	\ebi\queue\plugin\Dao\QueueDao::create_table();
 
 
-#function
+#Libs of the test
+	##test/testman.lib/**
+
+
+#Function
 
 	/**
 	 * 失敗とする
@@ -94,6 +119,11 @@
 	 * @return string
 	 */
 	test_map_url($map_name)
+
+
+#Special script file
+	__setup__.php
+	__teardown__.php
 
 
 #Util
