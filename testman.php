@@ -968,7 +968,7 @@ namespace testman{
 			if(isset($this->resource)) curl_close($this->resource);
 		}
 		/**
-		 * XMLオブジェクトとして返す
+		 * bodyを解析しXMLオブジェクトとして返す
 		 * @return \testman\Xml
 		 */
 		public function xml(){
