@@ -120,8 +120,10 @@ namespace testman{
 				$trace = $e->getTrace();
 				for($i=sizeof($trace);$i>=0;$i--){
 					if(isset($trace[$i]['file']) && $trace[$i]['file'] != __FILE__){
-						$res = array(-2,0,$trace[$i]['file'],$trace[$i]['line'],(string)$e);
-						break;
+						if(!(substr(__FILE__,0,7) == 'phar://' && dirname(substr(__FILE__,7)) == $trace[$i]['file'])){
+							$res = array(-2,0,$trace[$i]['file'],$trace[$i]['line'],(string)$e);
+							break;
+						}
 					}
 				}
 				if(!isset($res)){
@@ -131,6 +133,7 @@ namespace testman{
 			}
 			$res[1] = (round(microtime(true) - self::$start_time,3));
 			self::include_setup_teardown($test_path,'__teardown__.php');
+			// TODO
 			self::$resultset[$test_path] = $res;
 			return $res[0];
 		}
@@ -150,13 +153,13 @@ namespace testman{
 			return true;
 		}
 		static public function link(){
-			return 'Link'.md5(__FILE__);
+			return '_test_link'.md5(__FILE__);
 		}
-		static public function start($savedb,$lib_dir){
+		static public function start($coverage_data_file,$lib_dir){
 			if(extension_loaded('xdebug')){
 				self::$start = true;
-				self::$db = $savedb;
-				self::$linkvars['savedb'] = self::$db;
+				self::$db = $coverage_data_file;
+				self::$linkvars['coverage_data_file'] = self::$db;
 					
 				$fp = fopen(self::$db.'.target','w');
 				if(is_dir($lib_dir)){
@@ -1015,6 +1018,64 @@ namespace testman{
 			return self::$value;
 		}
 	}
+	class Std{
+		/**
+		 * 色付きでプリント
+		 * @param string $msg
+		 * @param string $color ANSI Colors
+		 */
+		static public function println($msg='',$color='0'){
+			if(substr(PHP_OS,0,3) != 'WIN'){
+				print("\033[".$color."m");
+				print($msg.PHP_EOL);
+				print("\033[0m");
+			}else{
+				print($msg.PHP_EOL);
+			}
+		}
+		/**
+		 * White
+		 * @param string $msg
+		 */
+		static public function println_default($msg){
+			self::println($msg,'37');
+		}
+		/**
+		 * Blue
+		 * @param string $msg
+		 */
+		static public function println_primary($msg){
+			self::println($msg,'34');
+		}
+		/**
+		 * Green
+		 * @param string $msg
+		 */
+		static public function println_success($msg){
+			self::println($msg,'32');
+		}
+		/**
+		 * Cyan
+		 * @param string $msg
+		 */
+		static public function println_info($msg){
+			self::println($msg,'36');
+		}
+		/**
+		 * Yellow
+		 * @param string $msg
+		 */
+		static public function println_warning($msg){
+			self::println($msg,'33');
+		}
+		/**
+		 * Red
+		 * @param string $msg
+		 */
+		static public function println_danger($msg){
+			self::println($msg,'31');
+		}
+	}
 	/**
 	 * router with built-in web server
 	 */
@@ -1114,28 +1175,21 @@ namespace testman{
 	}
 }
 namespace{
-	if(isset($_SERVER['SERVER_SOFTWARE']) && preg_match('/PHP.+Development Server/',$_SERVER['SERVER_SOFTWARE'])){
-		\testman\Router::start();
-		exit;
-	}
-	$trace = debug_backtrace(false);
+	$linkkey = \testman\Coverage::link();
 	
-	if((count($trace) > 0 && !isset($trace[0]['file']))
-		 || (count($trace) > 1 && substr($trace[0]['file'],-5) == '.phar')
-	){
-		$key = \testman\Coverage::link();
-		$linkvars = isset($_POST[$key]) ? $_POST[$key] : (isset($_GET[$key]) ? $_GET[$key] : array());
-		if(isset($_POST[$key])) unset($_POST[$key]);
-		if(isset($_GET[$key])) unset($_GET[$key]);
+	if(isset($_POST[$linkkey]) || isset($_GET[$linkkey])){
+		$linkvars = isset($_POST[$linkkey]) ? $_POST[$linkkey] : (isset($_GET[$linkkey]) ? $_GET[$linkkey] : array());
+		if(isset($_POST[$linkkey])) unset($_POST[$linkkey]);
+		if(isset($_GET[$linkkey])) unset($_GET[$linkkey]);
 
-		if(function_exists('xdebug_get_code_coverage') && isset($linkvars['savedb'])){
+		if(function_exists('xdebug_get_code_coverage') && isset($linkvars['coverage_data_file'])){
 			register_shutdown_function(function() use($linkvars){
 				register_shutdown_function(function() use($linkvars){
-					$savedb = $linkvars['savedb'];
+					$coverage_data_file = $linkvars['coverage_data_file'];
 					
-					if(is_file($savedb.'.target')){
-						$target = explode(PHP_EOL,file_get_contents($savedb.'.target'));
-						$fp = fopen($savedb.'.coverage','a');
+					if(is_file($coverage_data_file.'.target')){
+						$target = explode(PHP_EOL,file_get_contents($coverage_data_file.'.target'));
+						$fp = fopen($coverage_data_file.'.coverage','a');
 	
 						foreach(xdebug_get_code_coverage() as $file_path => $lines){
 							if(false !== ($i = array_search($file_path,$target))){
@@ -1150,6 +1204,10 @@ namespace{
 			xdebug_start_code_coverage();
 		}
 		return;
+	}
+	if(isset($_SERVER['SERVER_SOFTWARE']) && preg_match('/PHP.+Development Server/',$_SERVER['SERVER_SOFTWARE'])){
+		\testman\Router::start();
+		exit;
 	}
 	ini_set('display_errors','On');
 	ini_set('html_errors','Off');
@@ -1169,12 +1227,6 @@ namespace{
 	set_error_handler(function($n,$s,$f,$l){
 		throw new \ErrorException($s,0,$n,$f,$l);
 	});
-	
-	if(isset($_SERVER['SERVER_PORT'])){
-		header('HTTP/1.1 403 Forbidden');
-		print('Forbidden');
-		exit;
-	}
 	/**
 	 * 失敗とする
 	 * @param string $msg 失敗時メッセージ
@@ -1243,25 +1295,15 @@ namespace{
 		if(isset($urls[$map_name]) && substr_count($urls[$map_name],'%s') == sizeof($args)) return vsprintf($urls[$map_name],$args);
 		throw new \RuntimeException($map_name.(isset($urls[$map_name]) ? '['.sizeof($args).']' : '').' not found');
 	}
-	$println = function($msg='',$color='0'){
-		if(substr(PHP_OS,0,3) != 'WIN'){
-			print("\033[".$color."m");
-			print($msg.PHP_EOL);
-			print("\033[0m");
-		}else{
-			print($msg.PHP_EOL);
-		}
-	};
-	
 	\testman\Args::init();
-	$println('testman 0.1.0 (PHP '.phpversion().')'); // version
+	\testman\Std::println_default('testman 0.1.0 (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
-		$println('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
-		$println();
-		$println('Options:');
-		$println('  -c|--coverage <file>   Generate code coverage report in XML format.');
-		$println('  -o|--output <file>     Log test execution in XML format to file');
+		\testman\Std::println_default('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
+		\testman\Std::println();
+		\testman\Std::println_default('Options:');
+		\testman\Std::println_default('  -c|--coverage <file>   Generate code coverage report in XML format.');
+		\testman\Std::println_default('  -o|--output <file>     Log test execution in XML format to file');
 		exit;
 	}
 	
@@ -1311,7 +1353,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$println('Progress:','1;33');
+	\testman\Std::println_warning('Progress:');
 
 	$tab = '  ';
 	$success = $fail = $exception = $exe_time = $use_memory = 0;
@@ -1366,8 +1408,8 @@ namespace{
 		\testman\Coverage::stop();
 
 		// view
-		$println();
-		$println('Coverage: ','1;33');
+		\testman\Std::println();
+		\testman\Std::println_warning('Coverage: ');
 		
 		// output
 		$xml = new \SimpleXMLElement('<coverage></coverage>');
@@ -1388,28 +1430,29 @@ namespace{
 			$f->addChild('uncovered_lines',implode(',',$resultset['uncovered_line']));
 			
 			$color = ($resultset['exec'] == 1) ? '1;31' : '1;34';
+			$msg = sprintf(' %3d%% %s',$covered,$filename);
 			if($covered == 100){
-				$color = '32';
+				\testman\Std::println_success($msg);
 			}else if($covered > 50){
-				$color = '33';
+				\testman\Std::println_warning($msg);
 			}
-			$println(sprintf(' %3d%% %s',$covered,$filename),$color);			
 		}
 		$covered_sum = ($total_covered == 0) ? 0 : ceil($total_covered/$total_lines*100);
 		
-		$println(str_repeat('-',70));
-		$println(sprintf(' Covered %s%%',$covered_sum),'1;35');
+		\testman\Std::println_default(str_repeat('-',70));
+		\testman\Std::println_info(sprintf(' Covered %s%%',$covered_sum));
 
 		$xml->addAttribute('create_date',date('Y/m/d H:i:s'));
 		$xml->addAttribute('covered',$covered_sum);
 		$xml->addAttribute('lines',$total_lines);
 		$xml->addAttribute('covered_lines',$total_covered);
 		file_put_contents($coverage_output,$xml->asXML());
-		$println('  Written XML: '.$coverage_output,'34');
+		\testman\Std::println_primary('  Written XML: '.$coverage_output);
 	}
 	
-	$println();
-	$println('Results:','1;33');
+	
+	\testman\Std::println();
+	\testman\Std::println_warning('Results:');
 	foreach(\testman\Runner::resultset() as $file => $info){
 		switch($info[0]){
 			case 1:
@@ -1419,35 +1462,35 @@ namespace{
 				$fail++;
 				list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
 	
-				$println();
-				$println($file,'1;34');
-				$println('['.$line.']: '.$msg,'1;31');
+				\testman\Std::println();
+				\testman\Std::println_primary($file);
+				\testman\Std::println_danger('['.$line.']: '.$msg);
 				
 				if($has){
-					$println($tab.str_repeat('-',70));
+					\testman\Std::println_default($tab.str_repeat('-',70));
 					ob_start();
 						var_dump($r1);
-					$println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,ob_get_clean()));
+					\testman\Std::println_default($tab.str_replace(PHP_EOL,PHP_EOL.$tab,ob_get_clean()));
 					
-					$println($tab.str_repeat('-',70));
+					\testman\Std::println_default($tab.str_repeat('-',70));
 					ob_start();
 						var_dump($r2);
-					$println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,ob_get_clean()));
-				}				
+					\testman\Std::println_default($tab.str_replace(PHP_EOL,PHP_EOL.$tab,ob_get_clean()));
+				}		
 				break;
 			case -2:
 				$exception++;
 				list(,$time,$file,$line,$msg) = $info;
 	
-				$println();
-				$println($file,'1;34');
-				$println('['.$line.']: '.$msg,'1;31');
+				\testman\Std::println();
+				\testman\Std::println_primary($file);
+				\testman\Std::println_danger('['.$line.']: '.$msg);
 				break;
 		}
 	}
-	$println(str_repeat('=',80));
-	$println(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory),'35');
-	$println();
+	\testman\Std::println_default(str_repeat('=',80));
+	\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
+	\testman\Std::println();
 	
 	if(\testman\Conf::has('output') || \testman\Conf::has('o')){
 		$output = \testman\Conf::get('output',$output_dir.date('YmdHis').'.result.xml');
@@ -1540,6 +1583,6 @@ namespace{
 		$xml->addChild('system-err');
 		
 		file_put_contents($output,$xml->asXML());
-		$println('Written XML: '.realpath($output).' ','1;34');
+		\testman\Std::println_primary('Written XML: '.realpath($output).' ');
 	}
 }
