@@ -1207,7 +1207,7 @@ namespace{
 	}
 	if(isset($_SERVER['SERVER_SOFTWARE']) && preg_match('/PHP.+Development Server/',$_SERVER['SERVER_SOFTWARE'])){
 		\testman\Router::start();
-		exit;
+		return;
 	}
 	ini_set('display_errors','On');
 	ini_set('html_errors','Off');
