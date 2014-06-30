@@ -1353,8 +1353,6 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	\testman\Std::println_warning('Progress:');
-
 	$tab = '  ';
 	$success = $fail = $exception = $exe_time = $use_memory = 0;
 	$test_list = array();
@@ -1386,6 +1384,19 @@ namespace{
 	ksort($test_list);
 	$test_list = array_keys($test_list);
 	
+	$show_list = \testman\Args::opt('list',false);
+	if($show_list !== false){ 
+		$cwd = getcwd().DIRECTORY_SEPARATOR;
+		foreach($test_list as $test_path){
+			$p = str_replace($cwd,'',$test_path);
+			if($show_list === true || strpos($p,$show_list) !== false){
+				\testman\Std::println_info($p);				
+			}
+		}
+		exit;
+	}
+	
+	\testman\Std::println_warning('Progress:');	
 	print(' ');
 	print(str_repeat('+',sizeof($test_list)));
 	print("\033[".(sizeof($test_list)+2)."D");
