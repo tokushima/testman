@@ -1296,14 +1296,15 @@ namespace{
 		throw new \RuntimeException($map_name.(isset($urls[$map_name]) ? '['.sizeof($args).']' : '').' not found');
 	}
 	\testman\Args::init();
-	\testman\Std::println_default('testman 0.1.0 (PHP '.phpversion().')'); // version
+	\testman\Std::println('testman 0.1.0 (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
-		\testman\Std::println_default('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
+		\testman\Std::println('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
 		\testman\Std::println();
-		\testman\Std::println_default('Options:');
-		\testman\Std::println_default('  -c|--coverage <file>   Generate code coverage report in XML format.');
-		\testman\Std::println_default('  -o|--output <file>     Log test execution in XML format to file');
+		\testman\Std::println('Options:');
+		\testman\Std::println('  -c|--coverage <file>   Generate code coverage report in XML format.');
+		\testman\Std::println('  -o|--output <file>     Log test execution in XML format to file');
+		\testman\Std::println('  --list <keyword>       list files');
 		exit;
 	}
 	
@@ -1450,7 +1451,7 @@ namespace{
 		}
 		$covered_sum = ($total_covered == 0) ? 0 : ceil($total_covered/$total_lines*100);
 		
-		\testman\Std::println_default(str_repeat('-',70));
+		\testman\Std::println(str_repeat('-',70));
 		\testman\Std::println_info(sprintf(' Covered %s%%',$covered_sum));
 
 		$xml->addAttribute('create_date',date('Y/m/d H:i:s'));
@@ -1478,17 +1479,17 @@ namespace{
 				\testman\Std::println_danger('['.$line.']: '.$msg);
 				
 				if($has){
-					\testman\Std::println_default($tab.str_repeat('-',70));
+					\testman\Std::println($tab.str_repeat('-',70));
 					ob_start();
 						var_dump($r1);
 					$diff1 = ob_get_clean();
-					\testman\Std::println_default($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff1));
+					\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff1));
 					
-					\testman\Std::println_default($tab.str_repeat('-',70));
+					\testman\Std::println($tab.str_repeat('-',70));
 					ob_start();
 						var_dump($r2);
 					$diff2 = ob_get_clean();
-					\testman\Std::println_default($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff2));
+					\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff2));
 				}
 				break;
 			case -2:
@@ -1501,7 +1502,7 @@ namespace{
 				break;
 		}
 	}
-	\testman\Std::println_default(str_repeat('=',80));
+	\testman\Std::println(str_repeat('=',80));
 	\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
 	\testman\Std::println();
 	
