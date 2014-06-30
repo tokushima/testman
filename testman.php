@@ -1209,6 +1209,13 @@ namespace{
 		\testman\Router::start();
 		return;
 	}
+	$debug = debug_backtrace(false);
+	if(!(empty($debug) || 
+		(sizeof($debug) == 1 && isset($debug[0]['file']) && basename($debug[0]['file']) == basename(__FILE__,'.php').'.phar')
+	)){
+		return;
+	}	
+	
 	ini_set('display_errors','On');
 	ini_set('html_errors','Off');
 	ini_set('error_reporting',E_ALL);
