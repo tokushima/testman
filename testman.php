@@ -1470,13 +1470,15 @@ namespace{
 					\testman\Std::println_default($tab.str_repeat('-',70));
 					ob_start();
 						var_dump($r1);
-					\testman\Std::println_default($tab.str_replace(PHP_EOL,PHP_EOL.$tab,ob_get_clean()));
+					$diff1 = ob_get_clean();
+					\testman\Std::println_default($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff1));
 					
 					\testman\Std::println_default($tab.str_repeat('-',70));
 					ob_start();
 						var_dump($r2);
-					\testman\Std::println_default($tab.str_replace(PHP_EOL,PHP_EOL.$tab,ob_get_clean()));
-				}		
+					$diff2 = ob_get_clean();
+					\testman\Std::println_default($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff2));
+				}
 				break;
 			case -2:
 				$exception++;

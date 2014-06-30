@@ -26,7 +26,10 @@ STAB;
 	}else{
 		print('Failed '.$output.PHP_EOL);
 	}
-}catch (Exception $e){
+}catch(UnexpectedValueException $e){
+	print($e->getMessage().PHP_EOL.'usage: php -d phar.readonly=0 '.basename(__FILE__).PHP_EOL);
+}catch(Exception $e){
+	var_dump(get_class($e));
 	var_dump($e->getMessage());
 	var_dump($e->getTraceAsString());
 }
