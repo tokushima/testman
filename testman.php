@@ -74,13 +74,20 @@ namespace testman{
 		static private $resultset = array();
 		static private $start_time;
 
+		static public function init($path){
+			if(null !== ($f = \testman\Conf::find_path($path,basename(__FILE__,'.php').'.init.php'))){
+				include_once($f);
+				return true;
+			}
+			return false;
+		}
 		static public function fixture($path){
 			if(null !== ($f = \testman\Conf::find_path($path,basename(__FILE__,'.php').'.fixture.php'))){
 				include_once($f);
 				return true;
 			}
 			return false;
-		}		
+		}
 		static private function include_setup_teardown($test_file,$include_file){
 			if(strpos($test_file,getcwd()) === 0){
 				$inc = array();
@@ -1404,7 +1411,9 @@ namespace{
 		exit;
 	}
 	
-	\testman\Std::println_warning('Progress:');	
+	\testman\Std::println_warning('Progress:');
+	\testman\Runner::init($testpath);
+	
 	print(' ');
 	print(str_repeat('+',sizeof($test_list)));
 	print("\033[".(sizeof($test_list)+2)."D");
