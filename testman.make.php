@@ -14,7 +14,7 @@ try{
 	$stab = <<< 'STAB'
 <?php
 		Phar::mapPhar('%s.phar');
-		include 'phar://%s.phar/%s.php';
+		return include('phar://%s.phar/%s.php');
 		__HALT_COMPILER();
 ?>
 STAB;
