@@ -1113,7 +1113,7 @@ namespace testman{
 			}
 			$dir = getcwd();
 			$subdir = '';
-			$uri = $_SERVER['REQUEST_URI'];
+			$uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
 			if(strpos($uri,'?') !== false) list($uri) = explode('?',$uri,2);
 			if(substr($uri,0,1) == '/'){
 				$uri = substr($uri,1);
