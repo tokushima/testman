@@ -1209,7 +1209,7 @@ namespace{
 		throw new \RuntimeException($map_name.(isset($urls[$map_name]) ? '['.sizeof($args).']' : '').' not found');
 	}
 	\testman\Args::init();
-	\testman\Std::println('testman 0.1.0 (PHP '.phpversion().')'); // version
+	\testman\Std::println('testman [VERSION] (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
 		\testman\Std::println('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
@@ -1218,6 +1218,9 @@ namespace{
 		\testman\Std::println('  -c|--coverage <file>   Generate code coverage report in XML format.');
 		\testman\Std::println('  -o|--output <file>     Log test execution in XML format to file');
 		\testman\Std::println('  --list <keyword>       list files');
+		\testman\Std::println();
+		\testman\Std::println('Built-in server (router):');
+		\testman\Std::println('  Usage: php -S localhost:8000 phar://'.basename(__FILE__).'.phar/router.php');
 		exit;
 	}
 	
@@ -1376,7 +1379,6 @@ namespace{
 		file_put_contents($coverage_output,$xml->asXML());
 		\testman\Std::println_primary('  Written XML: '.$coverage_output);
 	}
-	
 	
 	\testman\Std::println();
 	\testman\Std::println_warning('Results:');
