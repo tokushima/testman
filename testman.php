@@ -1118,6 +1118,10 @@ namespace{
 		return;
 	}
 	
+	$debug = debug_backtrace(false);
+	if(sizeof($debug) > 1 || (isset($debug[0]['file']) && substr($debug[0]['file'],-5) != '.phar')){
+		return;
+	}
 	ini_set('display_errors','On');
 	ini_set('html_errors','Off');
 	ini_set('error_reporting',E_ALL);
@@ -1257,7 +1261,7 @@ namespace{
 		foreach($conf as $k => $v){
 			\testman\Conf::set($k,$v);
 		}
-	}	
+	}
 	foreach(array('coverage','c','output','o','libdir','outputdir','ssl_verify') as $k){
 		if(($v = \testman\Args::opt($k,null)) !== null){
 			\testman\Conf::set($k,$v);
