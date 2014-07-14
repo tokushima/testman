@@ -315,3 +315,10 @@
 		 */
 		extract($plain,$name=null)
 
+
+#Router (Built-in server)
+```
+Usage: php -S localhost:8000 phar://testman.phar/router.php');
+```
+
+
