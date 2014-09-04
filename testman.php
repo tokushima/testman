@@ -1130,6 +1130,9 @@ namespace{
 	ini_set('xdebug.var_display_max_depth',-1);
 	ini_set('memory_limit',-1);
 	
+	if(function_exists('opcache_reset')){
+		opcache_reset();
+	}	
 	if(ini_get('date.timezone') == ''){
 		date_default_timezone_set('Asia/Tokyo');
 	}
