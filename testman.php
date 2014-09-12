@@ -1130,9 +1130,6 @@ namespace{
 	ini_set('xdebug.var_display_max_depth',-1);
 	ini_set('memory_limit',-1);
 	
-	if(function_exists('opcache_reset')){
-		opcache_reset();
-	}	
 	if(ini_get('date.timezone') == ''){
 		date_default_timezone_set('Asia/Tokyo');
 	}
@@ -1426,6 +1423,12 @@ namespace{
 	\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
 	\testman\Std::println();
 	
+	if(\testman\Conf::has('cash') && function_exists('opcache_reset')){
+		$cash = strtolower(\testman\Conf::get('cash'));
+		if($cash == 'off' || $cash == 'false'){
+			opcache_reset();
+		}
+	}
 	if(\testman\Conf::has('output') || \testman\Conf::has('o')){
 		$output = \testman\Conf::get('output',$output_dir.date('YmdHis').'.result.xml');
 		if(!is_dir(dirname($output))){
