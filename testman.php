@@ -140,7 +140,6 @@ namespace testman{
 			}
 			$res[1] = (round(microtime(true) - self::$start_time,3));
 			self::include_setup_teardown($test_path,'__teardown__.php');
-			// TODO
 			self::$resultset[$test_path] = $res;
 			return $res[0];
 		}
