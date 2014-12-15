@@ -8,19 +8,19 @@ namespace testman{
 	class Conf{
 		static private $conf = array();
 		
-		static public function set($k,$v){
+		public static function set($k,$v){
 			self::$conf[$k] = $v;
 		}
-		static public function get($name,$default=null){
+		public static function get($name,$default=null){
 			if(isset(self::$conf[$name])){
 				return self::$conf[$name];
 			}
 			return $default;
 		}
-		static public function has($name){
+		public static function has($name){
 			return array_key_exists($name,self::$conf);
 		}
-		static public function find_path($dir,$name){
+		public static function find_path($dir,$name){
 			$dir = str_replace('\\','/',$dir);
 			$dirnames = explode('/',$dir);
 			
@@ -59,7 +59,7 @@ namespace testman{
 		}
 	}
 	class Assert{
-		static public function expvar($var){
+		public static function expvar($var){
 			if(is_numeric($var)) return strval($var);
 			if(is_object($var)) $var = get_object_vars($var);
 			if(is_array($var)){
@@ -73,8 +73,9 @@ namespace testman{
 	class Runner{
 		static private $resultset = array();
 		static private $start_time;
+		static private $current_test;
 
-		static public function init($testdir){
+		public static function init($testdir){
 			ini_set('display_errors','On');
 			ini_set('html_errors','Off');
 			ini_set('error_reporting',E_ALL);
@@ -128,14 +129,17 @@ namespace testman{
 				}
 			}
 		}
-		static public function fixture($path){
+		public static function current(){
+			return self::$current_test;
+		}
+		public static function fixture($path){
 			if(null !== ($f = \testman\Conf::find_path($path,basename(__FILE__,'.php').'.fixture.php'))){
 				include_once($f);
 				return true;
 			}
 			return false;
 		}
-		static private function include_setup_teardown($test_file,$include_file){
+		static private function exec_before_after($test_file,$include_file){
 			if(strpos($test_file,getcwd()) === 0){
 				$inc = array();
 				$dir = dirname($test_file);
@@ -151,9 +155,11 @@ namespace testman{
 				include($f);
 			}
 		}
-		static public function exec($test_path){
-			self::include_setup_teardown($test_path,'__setup__.php');
+		public static function exec($test_path){
+			self::exec_before_after($test_path,'__setup__.php');
 			self::$start_time = microtime(true);
+			self::$current_test = $test_path;
+			
 			try{
 				ob_start();
 					include($test_path);
@@ -186,14 +192,14 @@ namespace testman{
 				ob_end_clean();
 			}
 			$res[1] = (round(microtime(true) - self::$start_time,3));
-			self::include_setup_teardown($test_path,'__teardown__.php');
+			self::exec_before_after($test_path,'__teardown__.php');
 			self::$resultset[$test_path] = $res;
 			return $res[0];
 		}
-		static public function resultset(){
+		public static function resultset(){
 			return self::$resultset;
 		}
-		static public function get_list($testdir){
+		public static function get_list($testdir){
 			$test_list = array();
 			if(is_dir($testdir)){
 				foreach(new \RegexIterator(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($testdir,
@@ -212,10 +218,9 @@ namespace testman{
 			
 			return array_keys($test_list);
 		}
-		public static function output($output){
-			if(!is_dir(dirname($output))){
-				mkdir(dirname($output),0777,true);
-			}				
+		public static function output($output_dir){
+			$output = $output_dir.date('YmdHis').'.result.xml';
+			
 			$xml = new \SimpleXMLElement('<testsuites></testsuites>');
 			$get_testsuite = function($dir,&$testsuite) use($xml){
 				if(empty($testsuite)){
@@ -300,6 +305,8 @@ namespace testman{
 			$xml->addChild('system-err');
 				
 			file_put_contents($output,$xml->asXML());
+			
+			return realpath($output);
 		}
 		public static function start($testdir){
 			$tab = '  ';
@@ -378,29 +385,29 @@ namespace testman{
 		static private $result = array();
 		static private $linkvars = array();
 		
-		static public function has_link(&$vars){
+		public static function has_link(&$vars){
 			if(empty(self::$linkvars)) return false;
 			$vars = self::$linkvars;
 			return true;
 		}
-		static public function link(){
+		public static function link(){
 			return '_test_link'.md5(__FILE__);
 		}
-		static public function start($coverage_data_file,$lib_dir){
-			if(extension_loaded('xdebug')){
-				if(!is_dir(dirname($coverage_data_file))){
-					mkdir(dirname($coverage_data_file),0777,true);
+		public static function start($work_dir,$lib_dir=''){
+			if(extension_loaded('xdebug')){				
+				if(!is_dir($work_dir)){
+					mkdir($work_dir,0777,true);
 				}
-				file_put_contents($coverage_data_file,'');
-				$coverage_data_file = realpath($coverage_data_file);
-				
+				if(substr($work_dir,-1) != '/'){
+					$work_dir = $work_dir.'/';
+				}	
 				self::$start = true;
-				self::$db = $coverage_data_file;
+				self::$db = $work_dir.date('YmdHis').'.coverage.target';
 				self::$linkvars['coverage_data_file'] = self::$db;
 				
-				$fp = fopen(self::$db.'.target','w');				
+				$fp = fopen(self::$db,'w');
 				
-				if(is_dir($lib_dir)){
+				if(!empty($lib_dir) && is_dir($lib_dir)){
 					foreach(new \RecursiveIteratorIterator(
 							new \RecursiveDirectoryIterator(
 									$lib_dir,
@@ -421,11 +428,10 @@ namespace testman{
 			}else{
 				throw new \RuntimeException('xdebug extension not loaded');
 			}
-			return self::$db;
 		}
-		static public function stop(){
-			if(is_file(self::$db.'.target')){
-				$target = explode(PHP_EOL,trim(file_get_contents(self::$db.'.target')));
+		public static function stop(){
+			if(is_file(self::$db)){
+				$target = explode(PHP_EOL,trim(file_get_contents(self::$db)));
 				$fp = fopen(self::$db.'.coverage','a');
 
 				foreach(xdebug_get_code_coverage() as $file_path => $lines){
@@ -468,13 +474,19 @@ namespace testman{
 			}
 			xdebug_stop_code_coverage();
 	
-			if(is_file(self::$db.'.target')) unlink(self::$db.'.target');
-			if(is_file(self::$db.'.coverage')) unlink(self::$db.'.coverage');
+			if(is_file(self::$db.'.coverage')){
+				unlink(self::$db.'.coverage');
+			}
+			if(is_file(self::$db)){
+				unlink(self::$db);
+			}
 		}
-		static public function get(){
+		public static function get(){
 			return self::$result;
 		}
-		public static function output($coverage_output,$display=true){
+		public static function output($display=true){
+			$coverage_output = str_replace('coverage.target','coverage.xml',self::$db);
+			
 			if($display){
 				\testman\Std::println();
 				\testman\Std::println_warning('Coverage: ');
@@ -515,13 +527,10 @@ namespace testman{
 			
 			if($display){
 				\testman\Std::println(str_repeat('-',70));
-				\testman\Std::println_info(sprintf(' Covered %s%%',$covered_sum));
-				
+				\testman\Std::println_info(sprintf(' Covered %s%%',$covered_sum));				
 				\testman\Std::println_primary('  Written XML: '.$coverage_output);
 			}
 		}
-		
-		
 	}
 	/**
 	 * XMLを処理する
@@ -745,7 +754,7 @@ namespace testman{
 		 * @param string $value
 		 * @return \testman\Xml
 		 */
-		static public function anonymous($value){
+		public static function anonymous($value){
 			$xml = new self('XML'.uniqid());
 			$xml->escape(false);
 			$xml->value($value);
@@ -759,7 +768,7 @@ namespace testman{
 		 * @throws \testman\NotFoundException
 		 * @return \testman\Xml
 		 */
-		static public function extract($plain,$name=null){
+		public static function extract($plain,$name=null){
 			if(!(!empty($name) && strpos($plain,$name) === false) && self::find_extract($x,$plain,$name)){
 				return $x;
 			}
@@ -1271,7 +1280,7 @@ namespace testman{
 		static private $opt = array();
 		static private $value = array();
 	
-		static public function init(){
+		public static function init(){
 			$opt = $value = array();
 			$argv = array_slice((isset($_SERVER['argv']) ? $_SERVER['argv'] : array()),1);
 			
@@ -1294,16 +1303,16 @@ namespace testman{
 			self::$opt = $opt;
 			self::$value = $value;
 		}
-		static public function opt($name,$default=false){
+		public static function opt($name,$default=false){
 			return array_key_exists($name,self::$opt) ? self::$opt[$name][0] : $default;
 		}
-		static public function value($default=null){
+		public static function value($default=null){
 			return isset(self::$value[0]) ? self::$value[0] : $default;
 		}
-		static public function opts($name){
+		public static function opts($name){
 			return array_key_exists($name,self::$opt) ? self::$opt[$name] : array();
 		}
-		static public function values(){
+		public static function values(){
 			return self::$value;
 		}
 	}
@@ -1313,7 +1322,7 @@ namespace testman{
 		 * @param string $msg
 		 * @param string $color ANSI Colors
 		 */
-		static public function println($msg='',$color='0'){
+		public static function println($msg='',$color='0'){
 			if(substr(PHP_OS,0,3) != 'WIN'){
 				print("\033[".$color."m");
 				print($msg.PHP_EOL);
@@ -1326,42 +1335,42 @@ namespace testman{
 		 * White
 		 * @param string $msg
 		 */
-		static public function println_default($msg){
+		public static function println_default($msg){
 			self::println($msg,'37');
 		}
 		/**
 		 * Blue
 		 * @param string $msg
 		 */
-		static public function println_primary($msg){
+		public static function println_primary($msg){
 			self::println($msg,'34');
 		}
 		/**
 		 * Green
 		 * @param string $msg
 		 */
-		static public function println_success($msg){
+		public static function println_success($msg){
 			self::println($msg,'32');
 		}
 		/**
 		 * Cyan
 		 * @param string $msg
 		 */
-		static public function println_info($msg){
+		public static function println_info($msg){
 			self::println($msg,'36');
 		}
 		/**
 		 * Yellow
 		 * @param string $msg
 		 */
-		static public function println_warning($msg){
+		public static function println_warning($msg){
 			self::println($msg,'33');
 		}
 		/**
 		 * Red
 		 * @param string $msg
 		 */
-		static public function println_danger($msg){
+		public static function println_danger($msg){
 			self::println($msg,'31');
 		}
 	}
@@ -1519,15 +1528,11 @@ namespace{
 	if($testdir === false){
 		die(\testman\Args::value().' found'.PHP_EOL);
 	}
-	
-	
 	if(is_file($f=getcwd().'/bootstrap.php') || is_file($f=getcwd().'/vendor/autoload.php')){
 		ob_start();
 			include_once($f);
 		ob_end_clean();
 	}
-	
-
 	\testman\Std::println('testman [VERSION] (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
@@ -1537,15 +1542,10 @@ namespace{
 		\testman\Std::println('  -c|--coverage <file>   Generate code coverage report in XML format.');
 		\testman\Std::println('  -o|--output <file>     Log test execution in XML format to file');
 		\testman\Std::println('  --list <keyword>       list files');
-		\testman\Std::println();
-		\testman\Std::println('Built-in server (router):');
-		\testman\Std::println('  Usage: php -S localhost:8000 phar://'.basename(__FILE__).'.phar/router.php');
 		exit;
 	}
 	\testman\Runner::init($testdir);
-
-	
-	
+		
 	if(\testman\Args::opt('list',false) !== false){
 		$cwd = getcwd().DIRECTORY_SEPARATOR;
 		foreach(\testman\Runner::get_list($testdir) as $test_path){
@@ -1554,23 +1554,18 @@ namespace{
 		exit;
 	}
 
-	foreach(array('coverage','c','output','o','libdir','outputdir','ssl_verify') as $k){
+	foreach(array('coverage','c','output','o','libdir','ssl_verify') as $k){
 		if(($v = \testman\Args::opt($k,null)) !== null){
 			\testman\Conf::set($k,$v);
 		}
 	}
-	
-	
-	
-	$output_dir = \testman\Conf::get('outputdir',getcwd());
+	$output_dir = \testman\Conf::get('output',getcwd());
 	if(substr($output_dir,-1) != '/'){
 		$output_dir = $output_dir.'/';
-	}
-	
-	$in_coverage = (\testman\Conf::has('coverage') || \testman\Conf::has('c'));
-	if($in_coverage){
-		$coverage_output = \testman\Coverage::start(
-			\testman\Conf::get('coverage',$output_dir.date('YmdHis').'.coverage.xml'),
+	}	
+	if($in_coverage = (\testman\Conf::has('coverage') || \testman\Conf::has('c'))){
+		\testman\Coverage::start(
+			$output_dir,
 			\testman\Conf::get('libdir',getcwd().'/lib')
 		);
 	}
@@ -1578,13 +1573,9 @@ namespace{
 	
 	if($in_coverage){
 		\testman\Coverage::stop();
-		\testman\Coverage::output($coverage_output,true);
+		\testman\Coverage::output(true);
 	}
-	
-	// output XML
 	if(\testman\Conf::has('output') || \testman\Conf::has('o')){
-		$output = \testman\Conf::get('output',$output_dir.date('YmdHis').'.result.xml');
-		\testman\Runner::output($output);
-		\testman\Std::println_primary('Written XML: '.realpath($output).' ');
+		\testman\Std::println_primary('Written XML: '.\testman\Runner::output($output_dir).' ');
 	}
 }

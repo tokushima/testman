@@ -10,8 +10,7 @@ if(is_file($output)){
 }
 try{
 	$phar = new Phar($output,0,$filename.'.phar');
-	$phar[$filename.'.php'] = str_replace('[VERSION]','0.2.1',file_get_contents(__DIR__.'/'.$filename.'.php'));
-	$phar['router.php'] = file_get_contents(__DIR__.'/router.php');
+	$phar[$filename.'.php'] = str_replace('[VERSION]','0.3.1',file_get_contents(__DIR__.'/'.$filename.'.php'));
 	$stab = <<< 'STAB'
 <?php
 		Phar::mapPhar('%s.phar');
