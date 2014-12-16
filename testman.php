@@ -8,29 +8,47 @@ namespace testman{
 	class Conf{
 		static private $conf = array();
 		
+		/**
+		 * セット
+		 * @param string $k
+		 * @param mixed $v
+		 */
 		public static function set($k,$v){
 			self::$conf[$k] = $v;
 		}
+		/**
+		 * ゲット
+		 * @param string $name
+		 * @param mixed $default
+		 * @return mixed
+		 */
 		public static function get($name,$default=null){
 			if(isset(self::$conf[$name])){
 				return self::$conf[$name];
 			}
 			return $default;
 		}
+		/**
+		 * セットされているか
+		 * @param string $name
+		 * @return boolean
+		 */
 		public static function has($name){
 			return array_key_exists($name,self::$conf);
 		}
-		public static function find_path($dir,$name){
-			$dir = str_replace('\\','/',$dir);
-			$dirnames = explode('/',$dir);
-			
-			while(!empty($dirnames)){
-				$f = str_replace('//','/','/'.implode('/',$dirnames).'/'.$name);
-				
-				if(is_file($f) || is_dir($f)){
-					return $f;
-				}
-				array_pop($dirnames);
+		/**
+		 * 設定ファイル/ディレクトリが存在するか
+		 * @param string $name
+		 * @return Ambigous <NULL, string>|NULL
+		 */				
+		public static function has_settings($name){
+			$dir = dirname(__FILE__);
+			if(strpos($dir,'phar://') === 0){
+				$dir = str_replace('phar://','',dirname($dir));
+			}
+			if(is_dir($dir)){
+				$path = $dir.'/testman.'.$name;
+				return (is_file($path) || is_dir($path) ? $path : null);
 			}
 			return null;
 		}
@@ -59,9 +77,18 @@ namespace testman{
 		}
 	}
 	class Assert{
+		/**
+		 * 変数を展開していく
+		 * @param mixed $var
+		 * @return string
+		 */
 		public static function expvar($var){
-			if(is_numeric($var)) return strval($var);
-			if(is_object($var)) $var = get_object_vars($var);
+			if(is_numeric($var)){
+				return strval($var);
+			}
+			if(is_object($var)){
+				$var = get_object_vars($var);
+			}
 			if(is_array($var)){
 				foreach($var as $key => $v){
 					$var[$key] = self::expvar($v);
@@ -69,12 +96,89 @@ namespace testman{
 			}
 			return $var;
 		}
+		/**
+		 * 失敗とする
+		 * @param string $msg 失敗時メッセージ
+		 * @throws \testman\AssertFailure
+		 */
+		public static function failure($msg='failure'){
+			throw new \testman\AssertFailure($msg);
+		}
+		/**
+		 *　等しい
+		 * @param mixed $expectation 期待値
+		 * @param mixed $result 実行結果
+		 * @param string $msg 失敗時メッセージ
+		 */
+		public static function eq($expectation,$result,$msg='failure equals'){
+			if(self::expvar($expectation) !== self::expvar($result)){
+				$failure = new \testman\AssertFailure($msg);
+				throw $failure->ab($expectation, $result);
+			}
+		}
+		/**
+		 * 等しくない
+		 * @param mixed $expectation 期待値
+		 * @param mixed $result 実行結果
+		 * @param string $msg 失敗時メッセージ
+		 */
+		public static function neq($expectation,$result,$msg='failure not equals'){
+			if(self::expvar($expectation) === self::expvar($result)){
+				$failure = new \testman\AssertFailure($msg);
+				throw $failure->ab($expectation, $result);
+			}
+		}
+		/**
+		 *　文字列中に指定の文字列が存在する
+		 * @param string|array $keyword
+		 * @param string $src
+		 * @param string $msg 失敗時メッセージ
+		 */
+		public static function meq($keyword,$src,$msg='failure match'){
+			if(mb_strpos($src,$keyword) === false){
+				throw new \testman\AssertFailure($msg);
+			}
+		}
+		/**
+		 * 文字列中に指定の文字列が存在しない
+		 * @param string $keyword
+		 * @param string $src
+		 */
+		public static function mneq($keyword,$src,$msg='failure not match'){
+			if(mb_strpos($src,$keyword) !== false){
+				throw new \testman\AssertFailure($msg);
+			}
+		}
+		/**
+		 * mapに定義されたurlをフォーマットして返す
+		 * @param string $map_name
+		 * @throws \RuntimeException
+		 * @return string
+		 */
+		public static function test_map_url($map_name,$args=array()){
+			$urls = \testman\Conf::get('urls',array());
+			
+			if(empty($urls) || !is_array($urls)){
+				throw new \testman\NotFoundException('urls empty');
+			}	
+			if(isset($urls[$map_name]) && substr_count($urls[$map_name],'%s') == sizeof($args)){
+				return vsprintf($urls[$map_name],$args);
+			}
+			throw new \testman\NotFoundException($map_name.(isset($urls[$map_name]) ? '['.sizeof($args).']' : '').' not found');
+		}
 	}
 	class Runner{
 		static private $resultset = array();
 		static private $start_time;
 		static private $current_test;
 
+		/**
+		 * 初期化
+		 * @param string $testdir
+		 * @throws \ErrorException
+		 * @throws \RuntimeException
+		 * @return boolean
+		 */
 		public static function init($testdir){
 			ini_set('display_errors','On');
 			ini_set('html_errors','Off');
@@ -97,10 +201,10 @@ namespace testman{
 			if(function_exists('opcache_reset')){
 				opcache_reset();
 			}
-			if(null !== ($f = \testman\Conf::find_path($testdir,basename(__FILE__,'.php').'.init.php'))){
+			if(null !== ($f = \testman\Conf::has_settings('init.php'))){
 				include_once($f);
 			}
-			if(null !== ($dir = \testman\Conf::find_path($testdir,basename(__FILE__,'.php').'.lib'))){
+			if(null !== ($dir = \testman\Conf::has_settings('lib'))){
 				if(is_dir($dir) && strpos(get_include_path(),$dir) === false){
 					set_include_path($dir.PATH_SEPARATOR.get_include_path());
 			
@@ -121,7 +225,7 @@ namespace testman{
 					},true,false);
 				}
 			}
-			if(null !== ($f = \testman\Conf::find_path($testdir,basename(__FILE__,'.php').'.conf.php'))){
+			if(null !== ($f = \testman\Conf::has_settings('conf.php'))){
 				$conf = include($f);
 				if(!is_array($conf)) throw new \RuntimeException('invalid '.$f);
 				foreach($conf as $k => $v){
@@ -129,11 +233,18 @@ namespace testman{
 				}
 			}
 		}
+		/**
+		 * 現在実行しているテスト
+		 */
 		public static function current(){
 			return self::$current_test;
 		}
-		public static function fixture($path){
-			if(null !== ($f = \testman\Conf::find_path($path,basename(__FILE__,'.php').'.fixture.php'))){
+		/**
+		 * fixtureを実行する
+		 * @return boolean
+		 */
+		public static function fixture(){
+			if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
 				include_once($f);
 				return true;
 			}
@@ -147,7 +258,7 @@ namespace testman{
 					if(is_file($f=($dir.'/'.$include_file))) array_unshift($inc,$f);
 					$dir = dirname($dir);
 				}
-				if($include_file == '__teardown__.php'){
+				if($include_file == '__after__.php'){
 					krsort($inc);
 				}
 				foreach($inc as $i) include($i);
@@ -155,19 +266,25 @@ namespace testman{
 				include($f);
 			}
 		}
-		public static function exec($test_path){
-			self::exec_before_after($test_path,'__setup__.php');
+		/**
+		 * 実行する
+		 * @param string $test_path
+		 * @throws \RuntimeException
+		 * @return Ambigous <number>
+		 */
+		public static function exec($test_file){
+			self::exec_before_after($test_file,'__before__.php');
 			self::$start_time = microtime(true);
-			self::$current_test = $test_path;
+			self::$current_test = $test_file;
 			
 			try{
 				ob_start();
-					include($test_path);
+					include($test_file);
 				$rtn = ob_get_clean();
 				
 				if(preg_match('/(Parse|Fatal) error:.+/',$rtn,$m)){
 					$err = (preg_match('/syntax error.+code on line\s*(\d+)/',$rtn,$line) ?
-							'Parse error: syntax error '.$test_path.' code on line '.$line[1]
+							'Parse error: syntax error '.$test_file.' code on line '.$line[1]
 							: $m[0]);
 					throw new \RuntimeException($err);
 				}
@@ -192,13 +309,23 @@ namespace testman{
 				ob_end_clean();
 			}
 			$res[1] = (round(microtime(true) - self::$start_time,3));
-			self::exec_before_after($test_path,'__teardown__.php');
-			self::$resultset[$test_path] = $res;
+			self::exec_before_after($test_file,'__after__.php');
+			self::$resultset[$test_file] = $res;
 			return $res[0];
 		}
+		/**
+		 * 結果
+		 * @return string[]
+		 */
 		public static function resultset(){
 			return self::$resultset;
 		}
+		/**
+		 * 実行対象の一覧
+		 * @param string $testdir
+		 * @throws \InvalidArgumentException
+		 * @return string[]
+		 */
 		public static function get_list($testdir){
 			$test_list = array();
 			if(is_dir($testdir)){
@@ -218,6 +345,11 @@ namespace testman{
 			
 			return array_keys($test_list);
 		}
+		/**
+		 * 結果のXMLを出力する
+		 * @param string $output_dir
+		 * @return SimpleXMLElement|string
+		 */
 		public static function output($output_dir){
 			$output = $output_dir.date('YmdHis').'.result.xml';
 			
@@ -308,6 +440,10 @@ namespace testman{
 			
 			return realpath($output);
 		}
+		/**
+		 * 対象のテスト群を実行する
+		 * @param string $testdir
+		 */
 		public static function start($testdir){
 			$tab = '  ';
 			$success = $fail = $exception = $exe_time = $use_memory = 0;			
@@ -318,9 +454,8 @@ namespace testman{
 			print(' ');
 			print(str_repeat('+',sizeof($test_list)));
 			print("\033[".(sizeof($test_list)+2)."D");
-			print(\testman\Runner::fixture($testdir) ? "\033[32m@\033[0m" : '@');
-			print(' ');
-			
+			print(\testman\Runner::fixture() ? "\033[32m@\033[0m" : '@');
+			print(' ');			
 			
 			$start_time = microtime(true);
 			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
@@ -334,9 +469,10 @@ namespace testman{
 				print("\033[".(($status == 1) ? 32 : 31)."m*\033[0m");
 			}
 			print(PHP_EOL);
-			// TODO AAA
+			
 			\testman\Std::println();
 			\testman\Std::println_warning('Results:');
+			
 			foreach(\testman\Runner::resultset() as $file => $info){
 				switch($info[0]){
 					case 1:
@@ -385,14 +521,31 @@ namespace testman{
 		static private $result = array();
 		static private $linkvars = array();
 		
+		/**
+		 * リンクファイルが存在するか
+		 * @param mixed $vars
+		 * @return boolean
+		 */
 		public static function has_link(&$vars){
-			if(empty(self::$linkvars)) return false;
+			if(empty(self::$linkvars)){
+				return false;
+			}
 			$vars = self::$linkvars;
 			return true;
 		}
+		/**
+		 * リンクファイル名
+		 * @return string
+		 */
 		public static function link(){
 			return '_test_link'.md5(__FILE__);
 		}
+		/**
+		 * 測定を開始する
+		 * @param string $work_dir 一時ファイルの保存ディレクトリ
+		 * @param string $lib_dir 対象とするライブラリのディレクトリ
+		 * @throws \RuntimeException
+		 */
 		public static function start($work_dir,$lib_dir=''){
 			if(extension_loaded('xdebug')){				
 				if(!is_dir($work_dir)){
@@ -429,6 +582,9 @@ namespace testman{
 				throw new \RuntimeException('xdebug extension not loaded');
 			}
 		}
+		/**
+		 * 測定を終了する
+		 */
 		public static function stop(){
 			if(is_file(self::$db)){
 				$target = explode(PHP_EOL,trim(file_get_contents(self::$db)));
@@ -481,9 +637,17 @@ namespace testman{
 				unlink(self::$db);
 			}
 		}
+		/**
+		 * 結果の取得
+		 * @return string[]
+		 */
 		public static function get(){
 			return self::$result;
 		}
+		/**
+		 * startで指定した$work_dirに結果のXMLを出力する
+		 * @param string $display 
+		 */
 		public static function output($display=true){
 			$coverage_output = str_replace('coverage.target','coverage.xml',self::$db);
 			
@@ -1073,8 +1237,9 @@ namespace testman{
 			$url_info = parse_url($url);
 			$host = isset($url_info['host']) ? $url_info['host'] : '';
 			$cookie_base_path = $host.(isset($url_info['path']) ? $url_info['path'] : '');
-			if(\testman\Coverage::has_link($vars)) $this->request_vars[\testman\Coverage::link()] = $vars;
-	
+			if(\testman\Coverage::has_link($vars)){
+				$this->request_vars[\testman\Coverage::link()] = $vars;
+			}
 			if(isset($url_info['query'])){
 				parse_str($url_info['query'],$vars);
 				foreach($vars as $k => $v){
@@ -1203,7 +1368,9 @@ namespace testman{
 				list($url,$query) = explode('?',$this->url,2);
 				if(!empty($query)){
 					parse_str($query,$vars);
-					if(isset($vars[\testman\Coverage::link()])) unset($vars[\testman\Coverage::link()]);
+					if(isset($vars[\testman\Coverage::link()])){
+						unset($vars[\testman\Coverage::link()]);
+					}
 					if(!empty($vars)){
 						$url = $url.'?'.http_build_query($vars);
 					}
@@ -1280,6 +1447,9 @@ namespace testman{
 		static private $opt = array();
 		static private $value = array();
 	
+		/**
+		 * 初期化
+		 */
 		public static function init(){
 			$opt = $value = array();
 			$argv = array_slice((isset($_SERVER['argv']) ? $_SERVER['argv'] : array()),1);
@@ -1303,15 +1473,35 @@ namespace testman{
 			self::$opt = $opt;
 			self::$value = $value;
 		}
+		/**
+		 * オプション値の取得
+		 * @param string $name
+		 * @param string $default
+		 * @return string
+		 */
 		public static function opt($name,$default=false){
 			return array_key_exists($name,self::$opt) ? self::$opt[$name][0] : $default;
 		}
+		/**
+		 * 引数の取得
+		 * @param string $default
+		 * @return string
+		 */
 		public static function value($default=null){
 			return isset(self::$value[0]) ? self::$value[0] : $default;
 		}
+		/**
+		 * オプション値を配列として取得
+		 * @param unknown $name
+		 * @return multitype:
+		 */
 		public static function opts($name){
 			return array_key_exists($name,self::$opt) ? self::$opt[$name] : array();
 		}
+		/**
+		 * 引数を全て取得
+		 * @return multitype:
+		 */
 		public static function values(){
 			return self::$value;
 		}
@@ -1380,8 +1570,10 @@ namespace testman{
 
 // TODO
 namespace{
+	// coverage client
 	if(php_sapi_name() !== 'cli'){
 		$linkkey = \testman\Coverage::link();
+		
 		if(isset($_POST[$linkkey]) || isset($_GET[$linkkey])){
 			$linkvars = isset($_POST[$linkkey]) ? $_POST[$linkkey] : (isset($_GET[$linkkey]) ? $_GET[$linkkey] : array());
 			if(isset($_POST[$linkkey])) unset($_POST[$linkkey]);
@@ -1418,110 +1610,43 @@ namespace{
 		return;
 	}
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	// set functions
 	if(!function_exists('failure')){
-		/**
-		 * 失敗とする
-		 * @param string $msg 失敗時メッセージ
-		 * @throws \testman\AssertFailure
-		 */
 		function failure($msg='failure'){
-			throw new \testman\AssertFailure($msg);
+			\testman\Assert::failure($msg);
 		}
 	}
 	if(!function_exists('eq')){
-		/**
-		 *　等しい
-		 * @param mixed $expectation 期待値
-		 * @param mixed $result 実行結果
-		 * @param string $msg 失敗時メッセージ
-		 */
 		function eq($expectation,$result,$msg='failure equals'){
-			if(\testman\Assert::expvar($expectation) !== \testman\Assert::expvar($result)){
-				$failure = new \testman\AssertFailure($msg);
-				throw $failure->ab($expectation, $result);
-			}
+			\testman\Assert::eq($expectation,$result,$msg);
 		}
 	}
 	if(!function_exists('neq')){
-		/**
-		 * 等しくない
-		 * @param mixed $expectation 期待値
-		 * @param mixed $result 実行結果
-		 * @param string $msg 失敗時メッセージ
-		 */
 		function neq($expectation,$result,$msg='failure not equals'){
-			if(\testman\Assert::expvar($expectation) === \testman\Assert::expvar($result)){
-				$failure = new \testman\AssertFailure($msg);
-				throw $failure->ab($expectation, $result);
-			}
+			\testman\Assert::neq($expectation,$result,$msg);
 		}
 	}
 	if(!function_exists('meq')){
-		/**
-		 *　文字列中に指定の文字列が存在する
-		 * @param string|array $keyword
-		 * @param string $src
-		 * @param string $msg 失敗時メッセージ
-		 */
 		function meq($keyword,$src,$msg='failure match'){
-			if(mb_strpos($src,$keyword) === false){
-				throw new \testman\AssertFailure($msg);
-			}
+			\testman\Assert::meq($keyword,$src,$msg);
 		}
 	}
 	if(!function_exists('mneq')){
-		/**
-		 * 文字列中に指定の文字列が存在しない
-		 * @param string $keyword
-		 * @param string $src
-		 */
 		function mneq($keyword,$src,$msg='failure not match'){
-			if(mb_strpos($src,$keyword) !== false){
-				throw new \testman\AssertFailure($msg);
-			}
+			\testman\Assert::mneq($keyword,$src,$msg);
 		}
 	}
 	if(!function_exists('test_map_url')){
-		/**
-		 * mapに定義されたurlをフォーマットして返す
-		 * @param string $map_name
-		 * @throws \RuntimeException
-		 * @return string
-		 */
 		function test_map_url($map_name){
-			$urls = \testman\Conf::get('urls',array());
-			if(empty($urls) || !is_array($urls)) throw new \RuntimeException('urls empty');
 			$args = func_get_args();
 			array_shift($args);
-		
-			if(isset($urls[$map_name]) && substr_count($urls[$map_name],'%s') == sizeof($args)) return vsprintf($urls[$map_name],$args);
-			throw new \RuntimeException($map_name.(isset($urls[$map_name]) ? '['.sizeof($args).']' : '').' not found');
+			return \testman\Assert::test_map_url($map_name,$args);
 		}
 	}
 	
-	
-	
-	
-	
-	
-	
-	
-	
-
-	
-	
-	
-	
-	
+	/**
+	 * 基本の動作
+	 */
 	\testman\Args::init();
 	
 	$testdir = realpath(\testman\Args::value(getcwd().'/test'));
@@ -1539,22 +1664,27 @@ namespace{
 		\testman\Std::println('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
 		\testman\Std::println();
 		\testman\Std::println('Options:');
-		\testman\Std::println('  -c|--coverage <file>   Generate code coverage report in XML format.');
-		\testman\Std::println('  -o|--output <file>     Log test execution in XML format to file');
-		\testman\Std::println('  --list <keyword>       list files');
+		\testman\Std::println('  -c               Generate code coverage report in XML format.');
+		\testman\Std::println('  -o               Log test execution in XML format to file');
+		\testman\Std::println('  --list <keyword> list test files');
 		exit;
 	}
 	\testman\Runner::init($testdir);
 		
-	if(\testman\Args::opt('list',false) !== false){
+	if(($keyword = \testman\Args::opt('list',false)) !== false){
 		$cwd = getcwd().DIRECTORY_SEPARATOR;
-		foreach(\testman\Runner::get_list($testdir) as $test_path){
-			\testman\Std::println_info(str_replace($cwd,'',$test_path));
+		
+		foreach(\testman\Runner::get_list($cwd) as $test_path){
+			$test = str_replace($cwd,'',$test_path);
+			
+			if(empty($keyword) || strpos($test,$keyword) !== false){
+				\testman\Std::println_info($test);
+			}
 		}
 		exit;
 	}
 
-	foreach(array('coverage','c','output','o','libdir','ssl_verify') as $k){
+	foreach(array('c','o') as $k){
 		if(($v = \testman\Args::opt($k,null)) !== null){
 			\testman\Conf::set($k,$v);
 		}
