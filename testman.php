@@ -328,6 +328,7 @@ namespace testman{
 		 */
 		public static function get_list($testdir){
 			$test_list = array();
+			
 			if(is_dir($testdir)){
 				foreach(new \RegexIterator(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($testdir,
 						\FilesystemIterator::CURRENT_AS_FILEINFO|\FilesystemIterator::SKIP_DOTS|\FilesystemIterator::UNIX_PATHS
@@ -1567,8 +1568,6 @@ namespace testman{
 
 }
 
-
-// TODO
 namespace{
 	// coverage client
 	if(php_sapi_name() !== 'cli'){
@@ -1604,12 +1603,6 @@ namespace{
 		return;
 	}
 	
-	// include 
-	$debug = debug_backtrace(false);
-	if(sizeof($debug) > 1 || (isset($debug[0]['file']) && substr($debug[0]['file'],-5) != '.phar')){
-		return;
-	}
-	
 	// set functions
 	if(!function_exists('failure')){
 		function failure($msg='failure'){
@@ -1642,6 +1635,12 @@ namespace{
 			array_shift($args);
 			return \testman\Assert::test_map_url($map_name,$args);
 		}
+	}	
+	
+	// include
+	$debug = debug_backtrace(false);
+	if(sizeof($debug) > 1 || (isset($debug[0]['file']) && substr($debug[0]['file'],-5) != '.phar')){
+		return;
 	}
 	
 	/**
@@ -1670,14 +1669,14 @@ namespace{
 		exit;
 	}
 	\testman\Runner::init($testdir);
-		
+	
 	if(($keyword = \testman\Args::opt('list',false)) !== false){
 		$cwd = getcwd().DIRECTORY_SEPARATOR;
 		
-		foreach(\testman\Runner::get_list($cwd) as $test_path){
+		foreach(\testman\Runner::get_list($testdir) as $test_path){
 			$test = str_replace($cwd,'',$test_path);
 			
-			if(empty($keyword) || strpos($test,$keyword) !== false){
+			if($keyword === true || strpos($test,$keyword) !== false){
 				\testman\Std::println_info($test);
 			}
 		}
