@@ -1672,13 +1672,35 @@ namespace{
 	
 	if(($keyword = \testman\Args::opt('list',false)) !== false){
 		$cwd = getcwd().DIRECTORY_SEPARATOR;
-		
-		foreach(\testman\Runner::get_list($testdir) as $test_path){
-			$test = str_replace($cwd,'',$test_path);
-			
-			if($keyword === true || strpos($test,$keyword) !== false){
-				\testman\Std::println_info($test);
+
+		$summary = function($file){
+			$src = file_get_contents($file);
+			$summary = '';
+				
+			if(preg_match('/\/\*.+?\*\//s',$src,$m)){
+				list($summary) = explode(PHP_EOL,trim(
+						preg_replace('/@.+/','',
+								preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$m[0]))
+						)
+				));
 			}
+			return $summary;
+		};
+		$len = 8;
+		$test_list = array();
+		foreach(\testman\Runner::get_list($testdir) as $test_path){
+			if($keyword === true || strpos($test,$keyword) !== false){
+				$name = str_replace($cwd,'',$test_path);
+				
+				if($len < strlen($name)){
+					$len = strlen($name);
+				}
+				$test_list[$name] = $test_path;
+			}
+		}
+		
+		foreach($test_list as $name => $path){
+			\testman\Std::println('  '.str_pad($name,$len).' : '.$summary($path));
 		}
 		exit;
 	}
