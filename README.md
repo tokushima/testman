@@ -11,39 +11,14 @@
 
 	$ php testman.phar <path>
 
-#Code Coverage Analysis
-
-	$ php testman.phar <path> --coverage <file>
-
-
 #Options
 \--coverage <file>
 
-\-c
-
 	Generate code coverage report in XML format.
-
-
-\--libdir <directory>
-
-	Target library of code coverage.
-
 
 \--output <file>
 
-\-o
-
 	Generate report in XML format.
-
-
-\--outputdir <directory>
-
-	Output base directory	
-
-
-\--ssl_verify <boolean>
-
-	CURLOPT_SSL_VERIFYHOST
 
 #Config script file
 
@@ -53,9 +28,8 @@
 		<?php
 		return array(
 			'urls'=>\ebi\Dt::get_urls(),
-			'outputdir'=>dirname(__DIR__).'/work/test_output',
+			'output'=>dirname(__DIR__).'/work/result.xml',
 			'ssl_verify'=>false,
-			'libdir'=>dirname(__DIR__).'/src'
 		);
 
 #Fixture of the test
@@ -64,9 +38,6 @@
 	[sample]
 	<?php
 	\ebi\Dt::setup();
-	\ebi\SmtpBlackholeDao::create_table();
-	\ebi\queue\plugin\Dao\QueueDao::create_table();
-
 
 #Libs of the test
 	##test/testman.lib/**
@@ -122,8 +93,8 @@
 
 
 #Special script file
-	__setup__.php
-	__teardown__.php
+	__before__.php
+	__after__.php
 
 
 #Util
@@ -314,11 +285,5 @@
 		 * @return \testman\Xml
 		 */
 		extract($plain,$name=null)
-
-
-#Router (Built-in server)
-```
-Usage: php -S localhost:8000 phar://testman.phar/router.php');
-```
 
 

@@ -348,12 +348,10 @@ namespace testman{
 		}
 		/**
 		 * 結果のXMLを出力する
-		 * @param string $output_dir
+		 * @param string $output
 		 * @return SimpleXMLElement|string
 		 */
-		public static function output($output_dir){
-			$output = $output_dir.date('YmdHis').'.result.xml';
-			
+		public static function output($output){
 			$xml = new \SimpleXMLElement('<testsuites></testsuites>');
 			$get_testsuite = function($dir,&$testsuite) use($xml){
 				if(empty($testsuite)){
@@ -517,10 +515,10 @@ namespace testman{
 		}
 	}
 	class Coverage{
-		static private $start = false;
 		static private $db;
 		static private $result = array();
 		static private $linkvars = array();
+		static private $output;
 		
 		/**
 		 * リンクファイルが存在するか
@@ -547,41 +545,51 @@ namespace testman{
 		 * @param string $lib_dir 対象とするライブラリのディレクトリ
 		 * @throws \RuntimeException
 		 */
-		public static function start($work_dir,$lib_dir=''){
-			if(extension_loaded('xdebug')){				
-				if(!is_dir($work_dir)){
-					mkdir($work_dir,0777,true);
-				}
-				if(substr($work_dir,-1) != '/'){
-					$work_dir = $work_dir.'/';
-				}	
-				self::$start = true;
-				self::$db = $work_dir.date('YmdHis').'.coverage.target';
-				self::$linkvars['coverage_data_file'] = self::$db;
-				
-				$fp = fopen(self::$db,'w');
-				
-				if(!empty($lib_dir) && is_dir($lib_dir)){
-					foreach(new \RecursiveIteratorIterator(
-							new \RecursiveDirectoryIterator(
-									$lib_dir,
-									\FilesystemIterator::SKIP_DOTS|\FilesystemIterator::UNIX_PATHS
-							),\RecursiveIteratorIterator::SELF_FIRST
-					) as $f){
-						if($f->isFile() &&
-							substr($f->getFilename(),-4) == '.php' &&
-							strpos($f->getPathname(),'/test/') === false &&
-							ctype_upper(substr($f->getFilename(),0,1))
-						){
-							fwrite($fp,$f->getPathname().PHP_EOL);
+		public static function start($output_xml,$lib_dir=''){
+			if(!empty($output_xml)){
+				if(extension_loaded('xdebug')){
+					if(!is_dir($d = dirname($output_xml))){
+						mkdir($d,0777,true);
+					}
+					file_put_contents($output_xml,'');
+					$output_xml = realpath($output_xml);
+					
+					if($output_xml === false){
+						throw new \InvalidArgumentException('Write failure: '.$output_xml);
+					}
+					self::$output = $output_xml;
+					self::$db = self::$work_dir.'/'.date('YmdHis').'.coverage.target';
+					self::$linkvars['coverage_data_file'] = self::$db;
+					
+					$fp = fopen(self::$db,'w');
+					
+					if(empty($lib_dir)){
+						$lib_dir = getcwd().'/lib';
+					}
+					if(!empty($lib_dir) && is_dir($lib_dir)){
+						foreach(new \RecursiveIteratorIterator(
+								new \RecursiveDirectoryIterator(
+										$lib_dir,
+										\FilesystemIterator::SKIP_DOTS|\FilesystemIterator::UNIX_PATHS
+								),\RecursiveIteratorIterator::SELF_FIRST
+						) as $f){
+							if($f->isFile() &&
+								substr($f->getFilename(),-4) == '.php' &&
+								strpos($f->getPathname(),'/test/') === false &&
+								ctype_upper(substr($f->getFilename(),0,1))
+							){
+								fwrite($fp,$f->getPathname().PHP_EOL);
+							}
 						}
 					}
+					fclose($fp);
+					xdebug_start_code_coverage(XDEBUG_CC_UNUSED|XDEBUG_CC_DEAD_CODE);
+					return true;
+				}else{
+					throw new \RuntimeException('xdebug extension not loaded');
 				}
-				fclose($fp);
-				xdebug_start_code_coverage(XDEBUG_CC_UNUSED|XDEBUG_CC_DEAD_CODE);
-			}else{
-				throw new \RuntimeException('xdebug extension not loaded');
 			}
+			return false;
 		}
 		/**
 		 * 測定を終了する
@@ -589,7 +597,8 @@ namespace testman{
 		public static function stop(){
 			if(is_file(self::$db)){
 				$target = explode(PHP_EOL,trim(file_get_contents(self::$db)));
-				$fp = fopen(self::$db.'.coverage','a');
+				$tmp_file = self::$db.'.coverage';
+				$fp = fopen($tmp_file,'a');
 
 				foreach(xdebug_get_code_coverage() as $file_path => $lines){
 					if(false !== ($i = array_search($file_path,$target))){
@@ -598,7 +607,7 @@ namespace testman{
 				}
 				fclose($fp);
 					
-				foreach(explode(PHP_EOL,trim(file_get_contents(self::$db.'.coverage'))) as $json){
+				foreach(explode(PHP_EOL,trim(file_get_contents($tmp_file))) as $json){
 					if(!empty($json)){
 						$cov = json_decode($json,true);
 						if($cov !== false){
@@ -617,6 +626,8 @@ namespace testman{
 						}
 					}
 				}
+				unlink($tmp_file);
+				
 				foreach(self::$result as $filename => $cov){
 					self::$result[$filename]['covered_line'] = array_unique(self::$result[$filename]['covered_line_status']);
 					self::$result[$filename]['uncovered_line'] = array_diff(array_unique(self::$result[$filename]['uncovered_line_status']),self::$result[$filename]['covered_line']);
@@ -628,15 +639,13 @@ namespace testman{
 						self::$result[$filename] = array('covered_line'=>array(),'uncovered_line'=>array(),'exec'=>0);
 					}
 				}
+				if(is_file(self::$db)){
+					unlink(self::$db);
+				}
+				xdebug_stop_code_coverage();
+				return true;
 			}
-			xdebug_stop_code_coverage();
-	
-			if(is_file(self::$db.'.coverage')){
-				unlink(self::$db.'.coverage');
-			}
-			if(is_file(self::$db)){
-				unlink(self::$db);
-			}
+			return false;
 		}
 		/**
 		 * 結果の取得
@@ -650,8 +659,6 @@ namespace testman{
 		 * @param string $display 
 		 */
 		public static function output($display=true){
-			$coverage_output = str_replace('coverage.target','coverage.xml',self::$db);
-			
 			if($display){
 				\testman\Std::println();
 				\testman\Std::println_warning('Coverage: ');
@@ -688,12 +695,12 @@ namespace testman{
 			$xml->addAttribute('covered',$covered_sum);
 			$xml->addAttribute('lines',$total_lines);
 			$xml->addAttribute('covered_lines',$total_covered);
-			file_put_contents($coverage_output,$xml->asXML());
+			file_put_contents(self::$output,$xml->asXML());
 			
 			if($display){
 				\testman\Std::println(str_repeat('-',70));
 				\testman\Std::println_info(sprintf(' Covered %s%%',$covered_sum));				
-				\testman\Std::println_primary('  Written XML: '.$coverage_output);
+				\testman\Std::println_primary('  Written XML: '.self::$output);
 			}
 		}
 	}
@@ -1663,9 +1670,9 @@ namespace{
 		\testman\Std::println('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
 		\testman\Std::println();
 		\testman\Std::println('Options:');
-		\testman\Std::println('  -c               Generate code coverage report in XML format.');
-		\testman\Std::println('  -o               Log test execution in XML format to file');
-		\testman\Std::println('  --list <keyword> list test files');
+		\testman\Std::println('  --coverage <file>  Generate code coverage report in XML format.');
+		\testman\Std::println('  --output <file>    Log test execution in XML format to file');
+		\testman\Std::println('  --list [keyword]  List test files');
 		exit;
 	}
 	\testman\Runner::init($testdir);
@@ -1705,28 +1712,20 @@ namespace{
 		exit;
 	}
 
-	foreach(array('c','o') as $k){
+	foreach(array('coverage','output') as $k){
 		if(($v = \testman\Args::opt($k,null)) !== null){
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$output_dir = \testman\Conf::get('output',getcwd());
-	if(substr($output_dir,-1) != '/'){
-		$output_dir = $output_dir.'/';
-	}	
-	if($in_coverage = (\testman\Conf::has('coverage') || \testman\Conf::has('c'))){
-		\testman\Coverage::start(
-			$output_dir,
-			\testman\Conf::get('libdir',getcwd().'/lib')
-		);
-	}
+
+	\testman\Coverage::start(\testman\Conf::get('coverage'));
+	
 	\testman\Runner::start($testdir);
 	
-	if($in_coverage){
-		\testman\Coverage::stop();
+	if(\testman\Coverage::stop()){
 		\testman\Coverage::output(true);
 	}
-	if(\testman\Conf::has('output') || \testman\Conf::has('o')){
-		\testman\Std::println_primary('Written XML: '.\testman\Runner::output($output_dir).' ');
+	if(\testman\Conf::has('output')){
+		\testman\Std::println_primary('Written XML: '.\testman\Runner::output(\testman\Conf::get('output')).' ');
 	}
 }
