@@ -96,76 +96,6 @@ namespace testman{
 			}
 			return $var;
 		}
-		/**
-		 * 失敗とする
-		 * @param string $msg 失敗時メッセージ
-		 * @throws \testman\AssertFailure
-		 */
-		public static function failure($msg='failure'){
-			throw new \testman\AssertFailure($msg);
-		}
-		/**
-		 *　等しい
-		 * @param mixed $expectation 期待値
-		 * @param mixed $result 実行結果
-		 * @param string $msg 失敗時メッセージ
-		 */
-		public static function eq($expectation,$result,$msg='failure equals'){
-			if(self::expvar($expectation) !== self::expvar($result)){
-				$failure = new \testman\AssertFailure($msg);
-				throw $failure->ab($expectation, $result);
-			}
-		}
-		/**
-		 * 等しくない
-		 * @param mixed $expectation 期待値
-		 * @param mixed $result 実行結果
-		 * @param string $msg 失敗時メッセージ
-		 */
-		public static function neq($expectation,$result,$msg='failure not equals'){
-			if(self::expvar($expectation) === self::expvar($result)){
-				$failure = new \testman\AssertFailure($msg);
-				throw $failure->ab($expectation, $result);
-			}
-		}
-		/**
-		 *　文字列中に指定の文字列が存在する
-		 * @param string|array $keyword
-		 * @param string $src
-		 * @param string $msg 失敗時メッセージ
-		 */
-		public static function meq($keyword,$src,$msg='failure match'){
-			if(mb_strpos($src,$keyword) === false){
-				throw new \testman\AssertFailure($msg);
-			}
-		}
-		/**
-		 * 文字列中に指定の文字列が存在しない
-		 * @param string $keyword
-		 * @param string $src
-		 */
-		public static function mneq($keyword,$src,$msg='failure not match'){
-			if(mb_strpos($src,$keyword) !== false){
-				throw new \testman\AssertFailure($msg);
-			}
-		}
-		/**
-		 * mapに定義されたurlをフォーマットして返す
-		 * @param string $map_name
-		 * @throws \RuntimeException
-		 * @return string
-		 */
-		public static function test_map_url($map_name,$args=array()){
-			$urls = \testman\Conf::get('urls',array());
-			
-			if(empty($urls) || !is_array($urls)){
-				throw new \testman\NotFoundException('urls empty');
-			}	
-			if(isset($urls[$map_name]) && substr_count($urls[$map_name],'%s') == sizeof($args)){
-				return vsprintf($urls[$map_name],$args);
-			}
-			throw new \testman\NotFoundException($map_name.(isset($urls[$map_name]) ? '['.sizeof($args).']' : '').' not found');
-		}
 	}
 	class Runner{
 		static private $resultset = array();
@@ -1377,6 +1307,7 @@ namespace testman{
 				list($url,$query) = explode('?',$this->url,2);
 				if(!empty($query)){
 					parse_str($query,$vars);
+					
 					if(isset($vars[\testman\Coverage::link()])){
 						unset($vars[\testman\Coverage::link()]);
 					}
@@ -1618,35 +1549,87 @@ namespace{
 	
 	// set functions
 	if(!function_exists('failure')){
+		/**
+		 * 失敗とする
+		 * @param string $msg 失敗時メッセージ
+		 * @throws \testman\AssertFailure
+		 */
 		function failure($msg='failure'){
-			\testman\Assert::failure($msg);
+			throw new \testman\AssertFailure($msg);
 		}
 	}
 	if(!function_exists('eq')){
+		/**
+		 *　等しい
+		 * @param mixed $expectation 期待値
+		 * @param mixed $result 実行結果
+		 * @param string $msg 失敗時メッセージ
+		 */
 		function eq($expectation,$result,$msg='failure equals'){
-			\testman\Assert::eq($expectation,$result,$msg);
+			if(\testman\Assert::expvar($expectation) !== \testman\Assert::expvar($result)){
+				$failure = new \testman\AssertFailure($msg);
+				throw $failure->ab($expectation, $result);
+			}
 		}
 	}
 	if(!function_exists('neq')){
+		/**
+		 * 等しくない
+		 * @param mixed $expectation 期待値
+		 * @param mixed $result 実行結果
+		 * @param string $msg 失敗時メッセージ
+		 */
 		function neq($expectation,$result,$msg='failure not equals'){
-			\testman\Assert::neq($expectation,$result,$msg);
+			if(\testman\Assert::expvar($expectation) === \testman\Assert::expvar($result)){
+				$failure = new \testman\AssertFailure($msg);
+				throw $failure->ab($expectation, $result);
+			}
 		}
 	}
 	if(!function_exists('meq')){
+		/**
+		 *　文字列中に指定の文字列が存在する
+		 * @param string|array $keyword
+		 * @param string $src
+		 * @param string $msg 失敗時メッセージ
+		 */
 		function meq($keyword,$src,$msg='failure match'){
-			\testman\Assert::meq($keyword,$src,$msg);
+			if(mb_strpos($src,$keyword) === false){
+				throw new \testman\AssertFailure($msg);
+			}
 		}
 	}
 	if(!function_exists('mneq')){
+		/**
+		 * 文字列中に指定の文字列が存在しない
+		 * @param string $keyword
+		 * @param string $src
+		 */
 		function mneq($keyword,$src,$msg='failure not match'){
-			\testman\Assert::mneq($keyword,$src,$msg);
+			if(mb_strpos($src,$keyword) !== false){
+				throw new \testman\AssertFailure($msg);
+			}
 		}
 	}
 	if(!function_exists('test_map_url')){
+		/**
+		 * mapに定義されたurlをフォーマットして返す
+		 * @param string $map_name
+		 * @throws \RuntimeException
+		 * @return string
+		 */
 		function test_map_url($map_name){
 			$args = func_get_args();
 			array_shift($args);
-			return \testman\Assert::test_map_url($map_name,$args);
+			$urls = \testman\Conf::get('urls',array());
+				
+			if(empty($urls) || !is_array($urls)){
+				throw new \testman\NotFoundException('urls empty');
+			}
+			if(isset($urls[$map_name]) && substr_count($urls[$map_name],'%s') == sizeof($args)){
+				return vsprintf($urls[$map_name],$args);
+			}
+			throw new \testman\NotFoundException($map_name.(isset($urls[$map_name]) ? '['.sizeof($args).']' : '').' not found');
 		}
 	}	
 	
