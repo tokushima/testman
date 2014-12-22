@@ -1,5 +1,5 @@
 <?php
-$abc = new \test\Abc();
+$abc = new \my\Abc();
 eq('hoge',$abc->aaa('hoge'));
 eq('aaa',$abc->aaa('aaa'));
 

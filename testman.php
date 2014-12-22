@@ -125,42 +125,32 @@ namespace testman{
 				if('neutral' == mb_language()) mb_language('Japanese');
 				mb_internal_encoding('UTF-8');
 			}
-			set_error_handler(function($n,$s,$f,$l){
-				throw new \ErrorException($s,0,$n,$f,$l);
-			});			
 			if(function_exists('opcache_reset')){
 				opcache_reset();
-			}
-			if(null !== ($f = \testman\Conf::has_settings('init.php'))){
-				include_once($f);
-			}
+			}			
+			set_error_handler(function($n,$s,$f,$l){
+				throw new \ErrorException($s,0,$n,$f,$l);
+			});
+			
+			
 			if(null !== ($dir = \testman\Conf::has_settings('lib'))){
-				if(is_dir($dir) && strpos(get_include_path(),$dir) === false){
-					set_include_path($dir.PATH_SEPARATOR.get_include_path());
-			
-					spl_autoload_register(function($c){
-						if(!empty($c)){
-							$cp = str_replace('\\','/',(($c[0] == '\\') ? substr($c,1) : $c));
-							foreach(explode(PATH_SEPARATOR,get_include_path()) as $p){
-								if(!empty($p) && ($r = realpath($p)) !== false && is_file($f=$p.'/'.$cp.'.php')){
-									require_once($f);
-			
-									if(class_exists($c,false) || interface_exists($c,false) || trait_exists($c,false)){
-										return true;
-									}
-								}
-							}
+				$dir = realpath($dir);
+				
+				spl_autoload_register(function($class) use ($dir){
+					$cp = str_replace('\\','/',(($class[0] == '\\') ? substr($class,1) : $class));
+
+					if(strpos($cp,'test/') === 0 && is_file($f=($dir.'/'.substr($cp,5).'.php'))){
+						require_once($f);
+	
+						if(class_exists($class,false) || interface_exists($class,false) || trait_exists($class,false)){
+							return true;
 						}
-						return false;
-					},true,false);
-				}
+					}
+					return false;
+				},true,false);
 			}
-			if(null !== ($f = \testman\Conf::has_settings('conf.php'))){
-				$conf = include($f);
-				if(!is_array($conf)) throw new \RuntimeException('invalid '.$f);
-				foreach($conf as $k => $v){
-					\testman\Conf::set($k,$v);
-				}
+			if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
+				include_once($f);
 			}
 		}
 		/**
@@ -185,7 +175,9 @@ namespace testman{
 				$inc = array();
 				$dir = dirname($test_file);
 				while(strlen($dir) >= strlen(getcwd())){
-					if(is_file($f=($dir.'/'.$include_file))) array_unshift($inc,$f);
+					if(is_file($f=($dir.'/'.$include_file))){
+						array_unshift($inc,$f);
+					}
 					$dir = dirname($dir);
 				}
 				if($include_file == '__after__.php'){
@@ -262,8 +254,8 @@ namespace testman{
 			if(is_dir($testdir)){
 				foreach(new \RegexIterator(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($testdir,
 						\FilesystemIterator::CURRENT_AS_FILEINFO|\FilesystemIterator::SKIP_DOTS|\FilesystemIterator::UNIX_PATHS
-				),\RecursiveIteratorIterator::SELF_FIRST),'/\/[^\.\_].*\.php$/') as $f){
-					if(strpos($f->getPathname(),basename(__FILE__,'.php').'.') === false){
+				),\RecursiveIteratorIterator::SELF_FIRST),'/\.php$/') as $f){
+					if(!preg_match('/\/[\._]/',$f->getPathname()) && strpos($f->getPathname(),basename(__FILE__,'.php').'.') === false){
 						$test_list[$f->getPathname()] = true;
 					}
 				}

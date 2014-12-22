@@ -22,15 +22,13 @@
 
 #Config script file
 
-##test/testman.conf.php
+##test/testman.settings.php
 
 	[sample]
 		<?php
-		return array(
-			'urls'=>\ebi\Dt::get_urls(),
-			'output'=>dirname(__DIR__).'/work/result.xml',
-			'ssl_verify'=>false,
-		);
+			\testman\Conf::set('urls',\ebi\Dt::get_urls());
+			\testman\Conf::set('output',dirname(__DIR__).'/work/result.xml');
+			\testman\Conf::set('ssl-verify',false);
 
 #Fixture of the test
 	##test/testman.fixture.php
@@ -40,8 +38,13 @@
 	\ebi\Dt::setup();
 
 #Libs of the test
-	##test/testman.lib/**
-
+	##test/testman.lib/Abc.php
+	
+	[Abc.php]
+		<?php
+			namespace test;
+			class Abc{
+			}
 
 #Function
 

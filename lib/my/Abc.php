@@ -1,5 +1,5 @@
 <?php
-namespace test;
+namespace my;
 
 class Abc{
 	public function aaa($value){
