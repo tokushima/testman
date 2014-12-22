@@ -113,7 +113,6 @@ namespace testman{
 			ini_set('display_errors','On');
 			ini_set('html_errors','Off');
 			ini_set('error_reporting',E_ALL);
-			ini_set('opcache.revalidate_freq',0);
 			ini_set('xdebug.var_display_max_children',-1);
 			ini_set('xdebug.var_display_max_data',-1);
 			ini_set('xdebug.var_display_max_depth',-1);
