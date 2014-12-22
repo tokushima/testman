@@ -477,14 +477,14 @@ namespace testman{
 		public static function start($output_xml,$target_dir=null){
 			if(!empty($output_xml)){
 				if(extension_loaded('xdebug')){
-					self::$db = $output_xml;
-					$target_list_db = self::$db.'.target';
-					$tmp_db = self::$db.'.tmp';
-					
-					if(!is_dir($d = dirname(self::$db))){
+					if(!is_dir($d = dirname($output_xml))){
 						mkdir($d,0777,true);
 					}
-					file_put_contents(self::$db,'');
+					file_put_contents($output_xml,'');
+					self::$db = realpath($output_xml);
+					
+					$target_list_db = self::$db.'.target';
+					$tmp_db = self::$db.'.tmp';					
 					file_put_contents($target_list_db,'');
 					file_put_contents($tmp_db,'');
 					
@@ -1523,16 +1523,16 @@ namespace{
 			if(function_exists('xdebug_get_code_coverage') && isset($linkvars['coverage_data_file'])){
 				register_shutdown_function(function() use($linkvars){
 					register_shutdown_function(function() use($linkvars){
-						$db = $linkvars['coverage_data_file'];						
+						$db = $linkvars['coverage_data_file'];
 						$target_list_db = $db.'.target';
 						$tmp_db = $db.'.tmp';
 						
 						if(is_file($target_list_db)){
-							$target = explode(PHP_EOL,file_get_contents($target_list_db));
+							$target_list = explode(PHP_EOL,file_get_contents($target_list_db));
 							$fp = fopen($tmp_db,'a');
 		
 							foreach(xdebug_get_code_coverage() as $file_path => $lines){
-								if(false !== ($i = array_search($file_path,$target))){
+								if(false !== ($i = array_search($file_path,$target_list))){
 									fwrite($fp,json_encode(array($i,$lines)).PHP_EOL);
 								}
 							}
