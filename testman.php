@@ -389,8 +389,6 @@ namespace testman{
 			
 			$start_time = microtime(true);
 			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
-			$exe_time = round((microtime(true) - (float)$start_time),4);
-			$use_memory = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
 			
 			// excute
 			foreach($test_list as $test_path){
@@ -399,6 +397,9 @@ namespace testman{
 				print("\033[".(($status == 1) ? 32 : 31)."m*\033[0m");
 			}
 			print(PHP_EOL);
+			
+			$exe_time = round((microtime(true) - (float)$start_time),4);
+			$use_memory = round(number_format((memory_get_usage() / 1024 / 1024),3),4) - $start_mem;
 			
 			\testman\Std::println();
 			\testman\Std::println_warning('Results:');
