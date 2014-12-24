@@ -97,19 +97,96 @@ namespace testman{
 			return $var;
 		}
 	}
+	class Finder{
+		/**
+		 * テスト対象ファイルを探す
+		 * @param string $test_dir
+		 * @throws \InvalidArgumentException
+		 * @return stirng[]
+		 */
+		public static function get_list($test_dir){
+			$test_list = array();
+				
+			if(is_dir($test_dir)){
+				foreach(new \RegexIterator(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($test_dir,
+						\FilesystemIterator::CURRENT_AS_FILEINFO|\FilesystemIterator::SKIP_DOTS|\FilesystemIterator::UNIX_PATHS
+				),\RecursiveIteratorIterator::SELF_FIRST),'/\.php$/') as $f){
+					if(!preg_match('/\/[\._]/',$f->getPathname()) && strpos($f->getPathname(),basename(__FILE__,'.php').'.') === false){
+						$test_list[$f->getPathname()] = true;
+					}
+				}
+			}else if(is_file($test_dir)){
+				$test_list[realpath($test_dir)] = true;
+			}else{
+				throw new \InvalidArgumentException($test_dir.' not fond');
+			}
+			ksort($test_list);
+				
+			return array_keys($test_list);
+		}
+		/**
+		 * サマリ一覧
+		 * @param unknown $testdir
+		 * @param string $keyword
+		 * @return Ambigous <string, multitype:>|multitype:unknown
+		 */
+		public static function summary_list($testdir,$keyword=''){
+			$cwd = getcwd().DIRECTORY_SEPARATOR;
+		
+			$summary = function($file){
+				$src = file_get_contents($file);
+				$summary = '';
+					
+				if(preg_match('/\/\*.+?\*\//s',$src,$m)){
+					list($summary) = explode(PHP_EOL,trim(
+							preg_replace('/@.+/','',
+									preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$m[0]))
+							)
+					));
+				}
+				return $summary;
+			};
+			$len = 8;
+			$test_list = array();
+			foreach(self::get_list($testdir) as $test_path){
+				if($keyword === true || strpos($test_path,$keyword) !== false){
+					$name = str_replace($cwd,'',$test_path);
+		
+					if($len < strlen($name)){
+						$len = strlen($name);
+					}
+					$test_list[$name] = $test_path;
+				}
+			}
+			foreach($test_list as $name => $path){
+				\testman\Std::println('  '.str_pad($name,$len).' : '.$summary($path));
+			}
+			return $test_list;
+		}		
+	}
 	class Runner{
 		static private $resultset = array();
-		static private $start_time;
 		static private $current_test;
+		static private $start = false;
+		
+		/**
+		 * 現在実行しているテスト
+		 */
+		public static function current(){
+			return self::$current_test;
+		}
 
 		/**
-		 * 初期化
+		 * 対象のテスト群を実行する
 		 * @param string $testdir
-		 * @throws \ErrorException
-		 * @throws \RuntimeException
-		 * @return boolean
 		 */
-		public static function init($testdir){
+		public static function start($testdir){
+			if(self::$start){
+				return self::$resultset;
+			}
+			if(!is_dir($testdir)){
+				throw new \InvalidArgumentException($testdir.' not found');
+			}			
 			ini_set('display_errors','On');
 			ini_set('html_errors','Off');
 			ini_set('error_reporting',E_ALL);
@@ -132,7 +209,6 @@ namespace testman{
 				throw new \ErrorException($s,0,$n,$f,$l);
 			});
 			
-			
 			if(null !== ($dir = \testman\Conf::has_settings('lib'))){
 				$dir = realpath($dir);
 				
@@ -152,25 +228,190 @@ namespace testman{
 			if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
 				include_once($f);
 			}
-		}
-		/**
-		 * 現在実行しているテスト
-		 */
-		public static function current(){
-			return self::$current_test;
-		}
-		/**
-		 * fixtureを実行する
-		 * @return boolean
-		 */
-		public static function fixture(){
-			if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
-				include_once($f);
-				return true;
+			$testdir = realpath($testdir);
+			$tab = '  ';
+			$success = $fail = $exception = $exe_time = $use_memory = 0;
+		
+			\testman\Std::println_warning('Progress:');
+			$test_list = \testman\Finder::get_list($testdir);
+		
+			$fixture = function(){
+				if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
+					include_once($f);
+					return true;
+				}
+				return false;
+			};
+		
+			\testman\Std::p(' ');
+			\testman\Std::p(str_repeat('+',sizeof($test_list)));
+			\testman\Std::p("\033[".(sizeof($test_list)+2)."D");
+			\testman\Std::p($fixture() ? "\033[32m@\033[0m" : '@');
+			\testman\Std::p(' ');
+		
+			$start_time = microtime(true);
+			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
+			
+			\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
+			
+			foreach($test_list as $test_path){
+				\testman\Std::p("/\033[1D");
+				$status = \testman\Runner::exec($test_path);
+				\testman\Std::p("\033[".(($status == 1) ? 32 : 31)."m*\033[0m");
 			}
-			return false;
+			\testman\Std::p(PHP_EOL);
+		
+			$exe_time = round((microtime(true) - (float)$start_time),4);
+			$use_memory = round(number_format((memory_get_usage() / 1024 / 1024),3),4) - $start_mem;
+		
+			\testman\Std::println();
+			\testman\Std::println_warning('Results:');
+		
+			foreach(self::$resultset as $file => $info){
+				switch($info[0]){
+					case 1:
+						$success++;
+						break;
+					case -1:
+						$fail++;
+						list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
+							
+						\testman\Std::println();
+						\testman\Std::println_primary($file);
+						\testman\Std::println_danger('['.$line.']: '.$msg);
+							
+						if($has){
+							\testman\Std::println($tab.str_repeat('-',70));
+							ob_start();
+								var_dump($r1);
+							$diff1 = ob_get_clean();
+							\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff1));
+		
+							\testman\Std::println($tab.str_repeat('-',70));
+							ob_start();
+								var_dump($r2);
+							$diff2 = ob_get_clean();
+							\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff2));
+						}
+						break;
+					case -2:
+						$exception++;
+						list(,$time,$file,$line,$msg) = $info;
+							
+						\testman\Std::println();
+						\testman\Std::println_primary($file);
+						\testman\Std::println_danger('['.$line.']: '.$msg);
+						break;
+				}
+			}
+			\testman\Std::println(str_repeat('=',80));
+			\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
+			\testman\Std::println();
+			
+			if(\testman\Conf::has('output')){
+				\testman\Std::println_primary('Written Result:   '.self::output(\testman\Conf::get('output')).' ');
+			}
+			if(\testman\Coverage::stop()){
+				\testman\Coverage::output();
+			}
+			return self::$resultset;
 		}
-		static private function exec_before_after($test_file,$include_file){
+		
+		private static function output($output){
+			if(!is_dir(dirname($output))){
+				mkdir(dirname($output),0777,true);
+			}
+			$xml = new \SimpleXMLElement('<testsuites></testsuites>');
+			$get_testsuite = function($dir,&$testsuite) use($xml){
+				if(empty($testsuite)){
+					$testsuite = $xml->addChild('testsuite');
+					$testsuite->addAttribute('name',$dir);
+				}
+				return $testsuite;
+			};
+		
+			$list = array();
+			foreach(self::$resultset as $file => $info){
+				$list[dirname($file)][basename($file)] = $info;
+			}
+			$errors = $failures = $times = 0;
+			foreach($list as $dir => $files){
+				$testsuite = null;
+				$dir_time = $dir_failures = $dir_errors = 0;
+		
+				foreach($files as $file => $info){
+					switch($info[0]){
+						case 1:
+							list(,$time) = $info;
+							$x = $get_testsuite($dir,$testsuite)->addChild('testcase');
+							$x->addAttribute('name',basename($file));
+							$x->addAttribute('time',$time);
+		
+							$dir_time += $time;
+							break;
+						case -1:
+							list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
+							$dir_failures++;
+		
+							$x = $get_testsuite($dir,$testsuite)->addChild('testcase');
+							$x->addAttribute('name',basename($file));
+							$x->addAttribute('time',$time);
+							$x->addAttribute('line',$line);
+		
+							if($has){
+								ob_start();
+								var_dump($r2);
+								$failure_value = 'Line. '.$line.': '."\n".ob_get_clean();
+								$failure = dom_import_simplexml($x->addChild('failure'));
+								$failure->appendChild($failure->ownerDocument->createCDATASection($failure_value));
+							}
+							$dir_time += $time;
+							break;
+						case -2:
+							list(,$time,$file,$line,$msg) = $info;
+							$dir_errors++;
+		
+							$x = $get_testsuite($dir,$testsuite)->addChild('testcase');
+							$x->addAttribute('name',basename($file));
+							$x->addAttribute('time',$time);
+							$x->addAttribute('line',$line);
+		
+							$error_value = 'Line. '.$line.': '.$msg;
+							$error = $x->addChild('error');
+							$error->addAttribute('line',$line);
+							$error_node = dom_import_simplexml($error);
+							$error_node->appendChild($error_node->ownerDocument->createCDATASection($error_value));
+		
+							$dir_time += $time;
+							break;
+					}
+				}
+				if(!empty($testsuite)){
+					$testsuite->addAttribute('tests',sizeof($files));
+					$testsuite->addAttribute('failures',$dir_failures);
+					$testsuite->addAttribute('errors',$dir_errors);
+					$testsuite->addAttribute('time',$dir_time);
+				}
+				$failures += $dir_failures;
+				$errors += $dir_errors;
+				$times += $dir_time;
+			}
+			$xml->addAttribute('tests',sizeof(self::$resultset));
+			$xml->addAttribute('failures',$failures);
+			$xml->addAttribute('errors',$errors);
+			$xml->addAttribute('time',$times);
+			$xml->addAttribute('create_date',date('Y/m/d H:i:s'));
+			$xml->addChild('system-out');
+			$xml->addChild('system-err');
+		
+			file_put_contents($output,$xml->asXML());
+				
+			return realpath($output);
+		}		
+		
+				
+		
+		private static function exec_before_after($test_file,$include_file){
 			if(strpos($test_file,getcwd()) === 0){
 				$inc = array();
 				$dir = dirname($test_file);
@@ -188,16 +429,10 @@ namespace testman{
 				include($f);
 			}
 		}
-		/**
-		 * 実行する
-		 * @param string $test_path
-		 * @throws \RuntimeException
-		 * @return Ambigous <number>
-		 */
-		public static function exec($test_file){
+		private static function exec($test_file){
 			self::exec_before_after($test_file,'__before__.php');
-			self::$start_time = microtime(true);
 			self::$current_test = $test_file;
+			$test_exec_start_time = microtime(true);
 			
 			try{
 				ob_start();
@@ -230,211 +465,10 @@ namespace testman{
 				}
 				ob_end_clean();
 			}
-			$res[1] = (round(microtime(true) - self::$start_time,3));
+			$res[1] = (round(microtime(true) - $test_exec_start_time,3));
 			self::exec_before_after($test_file,'__after__.php');
 			self::$resultset[$test_file] = $res;
 			return $res[0];
-		}
-		/**
-		 * 結果
-		 * @return string[]
-		 */
-		public static function resultset(){
-			return self::$resultset;
-		}
-		/**
-		 * 実行対象の一覧
-		 * @param string $testdir
-		 * @throws \InvalidArgumentException
-		 * @return string[]
-		 */
-		public static function get_list($testdir){
-			$test_list = array();
-			
-			if(is_dir($testdir)){
-				foreach(new \RegexIterator(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($testdir,
-						\FilesystemIterator::CURRENT_AS_FILEINFO|\FilesystemIterator::SKIP_DOTS|\FilesystemIterator::UNIX_PATHS
-				),\RecursiveIteratorIterator::SELF_FIRST),'/\.php$/') as $f){
-					if(!preg_match('/\/[\._]/',$f->getPathname()) && strpos($f->getPathname(),basename(__FILE__,'.php').'.') === false){
-						$test_list[$f->getPathname()] = true;
-					}
-				}
-			}else if(is_file($testdir)){
-				$test_list[realpath($testdir)] = true;
-			}else{
-				throw new \InvalidArgumentException($testdir.' not');
-			}
-			ksort($test_list);
-			
-			return array_keys($test_list);
-		}
-		/**
-		 * 結果のXMLを出力する
-		 * @param string $output
-		 * @return SimpleXMLElement|string
-		 */
-		public static function output($output){
-			$xml = new \SimpleXMLElement('<testsuites></testsuites>');
-			$get_testsuite = function($dir,&$testsuite) use($xml){
-				if(empty($testsuite)){
-					$testsuite = $xml->addChild('testsuite');
-					$testsuite->addAttribute('name',$dir);
-				}
-				return $testsuite;
-			};
-		
-			$list = array();
-			foreach(self::resultset() as $file => $info){
-				$list[dirname($file)][basename($file)] = $info;
-			}
-			$errors = $failures = $times = 0;
-			foreach($list as $dir => $files){
-				$testsuite = null;
-				$dir_time = $dir_failures = $dir_errors = 0;
-				
-				foreach($files as $file => $info){
-					switch($info[0]){
-						case 1:
-							list(,$time) = $info;
-							$x = $get_testsuite($dir,$testsuite)->addChild('testcase');
-							$x->addAttribute('name',basename($file));
-							$x->addAttribute('time',$time);
-		
-							$dir_time += $time;
-							break;
-						case -1:
-							list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
-							$dir_failures++;
-		
-							$x = $get_testsuite($dir,$testsuite)->addChild('testcase');
-							$x->addAttribute('name',basename($file));
-							$x->addAttribute('time',$time);
-							$x->addAttribute('line',$line);
-								
-							if($has){
-								ob_start();
-								var_dump($r2);
-								$failure_value = 'Line. '.$line.': '."\n".ob_get_clean();
-								$failure = dom_import_simplexml($x->addChild('failure'));
-								$failure->appendChild($failure->ownerDocument->createCDATASection($failure_value));
-							}
-							$dir_time += $time;
-							break;
-						case -2:
-							list(,$time,$file,$line,$msg) = $info;
-							$dir_errors++;
-		
-							$x = $get_testsuite($dir,$testsuite)->addChild('testcase');
-							$x->addAttribute('name',basename($file));
-							$x->addAttribute('time',$time);
-							$x->addAttribute('line',$line);
-								
-							$error_value = 'Line. '.$line.': '.$msg;
-							$error = $x->addChild('error');
-							$error->addAttribute('line',$line);
-							$error_node = dom_import_simplexml($error);
-							$error_node->appendChild($error_node->ownerDocument->createCDATASection($error_value));
-		
-							$dir_time += $time;
-							break;
-					}
-				}
-				if(!empty($testsuite)){
-					$testsuite->addAttribute('tests',sizeof($files));
-					$testsuite->addAttribute('failures',$dir_failures);
-					$testsuite->addAttribute('errors',$dir_errors);
-					$testsuite->addAttribute('time',$dir_time);
-				}
-				$failures += $dir_failures;
-				$errors += $dir_errors;
-				$times += $dir_time;
-			}
-			$xml->addAttribute('tests',sizeof(self::resultset()));
-			$xml->addAttribute('failures',$failures);
-			$xml->addAttribute('errors',$errors);
-			$xml->addAttribute('time',$times);
-			$xml->addAttribute('create_date',date('Y/m/d H:i:s'));
-			$xml->addChild('system-out');
-			$xml->addChild('system-err');
-				
-			file_put_contents($output,$xml->asXML());
-			
-			return realpath($output);
-		}
-		/**
-		 * 対象のテスト群を実行する
-		 * @param string $testdir
-		 */
-		public static function start($testdir){
-			$tab = '  ';
-			$success = $fail = $exception = $exe_time = $use_memory = 0;			
-			
-			\testman\Std::println_warning('Progress:');
-			$test_list = self::get_list($testdir);
-			
-			print(' ');
-			print(str_repeat('+',sizeof($test_list)));
-			print("\033[".(sizeof($test_list)+2)."D");
-			print(\testman\Runner::fixture() ? "\033[32m@\033[0m" : '@');
-			print(' ');			
-			
-			$start_time = microtime(true);
-			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
-			
-			// excute
-			foreach($test_list as $test_path){
-				print("/\033[1D");
-				$status = \testman\Runner::exec($test_path);
-				print("\033[".(($status == 1) ? 32 : 31)."m*\033[0m");
-			}
-			print(PHP_EOL);
-			
-			$exe_time = round((microtime(true) - (float)$start_time),4);
-			$use_memory = round(number_format((memory_get_usage() / 1024 / 1024),3),4) - $start_mem;
-			
-			\testman\Std::println();
-			\testman\Std::println_warning('Results:');
-			
-			foreach(\testman\Runner::resultset() as $file => $info){
-				switch($info[0]){
-					case 1:
-						$success++;
-						break;
-					case -1:
-						$fail++;
-						list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
-			
-						\testman\Std::println();
-						\testman\Std::println_primary($file);
-						\testman\Std::println_danger('['.$line.']: '.$msg);
-			
-						if($has){
-							\testman\Std::println($tab.str_repeat('-',70));
-							ob_start();
-							var_dump($r1);
-							$diff1 = ob_get_clean();
-							\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff1));
-								
-							\testman\Std::println($tab.str_repeat('-',70));
-							ob_start();
-							var_dump($r2);
-							$diff2 = ob_get_clean();
-							\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff2));
-						}
-						break;
-					case -2:
-						$exception++;
-						list(,$time,$file,$line,$msg) = $info;
-			
-						\testman\Std::println();
-						\testman\Std::println_primary($file);
-						\testman\Std::println_danger('['.$line.']: '.$msg);
-						break;
-				}
-			}
-			\testman\Std::println(str_repeat('=',80));
-			\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
-			\testman\Std::println();			
 		}
 	}
 	class Coverage{
@@ -577,13 +611,11 @@ namespace testman{
 		}
 		/**
 		 * startで指定した$work_dirに結果のXMLを出力する
-		 * @param string $display 
 		 */
-		public static function output($display=true){
-			if($display){
-				\testman\Std::println();
-				\testman\Std::println_warning('Coverage: ');
-			}
+		public static function output(){
+			\testman\Std::println();
+			\testman\Std::println_warning('Coverage: ');
+			
 			$xml = new \SimpleXMLElement('<coverage></coverage>');
 
 			$total_covered = $total_lines = 0;
@@ -601,15 +633,13 @@ namespace testman{
 				$f->addChild('covered_lines',implode(',',$resultset['covered_line']));
 				$f->addChild('uncovered_lines',implode(',',$resultset['uncovered_line']));
 				
-				if($display){
-					$msg = sprintf(' %3d%% %s',$covered,$filename);				
-					if($covered == 100){
-						\testman\Std::println_success($msg);
-					}else if($covered > 50){
-						\testman\Std::println_warning($msg);
-					}else{
-						\testman\Std::println_danger($msg);						
-					}
+				$msg = sprintf(' %3d%% %s',$covered,$filename);				
+				if($covered == 100){
+					\testman\Std::println_success($msg);
+				}else if($covered > 50){
+					\testman\Std::println_warning($msg);
+				}else{
+					\testman\Std::println_danger($msg);						
 				}
 			}
 			$covered_sum = ($total_covered == 0) ? 0 : ceil($total_covered/$total_lines*100);
@@ -620,11 +650,9 @@ namespace testman{
 			$xml->addAttribute('covered_lines',$total_covered);
 			file_put_contents(self::$db,$xml->asXML());
 			
-			if($display){
-				\testman\Std::println(str_repeat('-',70));
-				\testman\Std::println_info(sprintf(' Covered %s%%',$covered_sum));
-				\testman\Std::println_primary(PHP_EOL.'Written Coverage: '.realpath(self::$db));
-			}
+			\testman\Std::println(str_repeat('-',70));
+			\testman\Std::println_info(sprintf(' Covered %s%%',$covered_sum));
+			\testman\Std::println_primary(PHP_EOL.'Written Coverage: '.realpath(self::$db));
 		}
 	}
 	/**
@@ -1439,19 +1467,37 @@ namespace testman{
 		}
 	}
 	class Std{
+		private static $stdout = true;
+		
+		/**
+		 * 標準出力に表示するか
+		 * @param boolean $bool
+		 */
+		public static function disp($bool){
+			self::$stdout = $bool;
+		}
 		/**
 		 * 色付きでプリント
+		 * @param string $msg
+		 */
+		public static function p($msg,$color='0'){
+			if(self::$stdout){
+				if(substr(PHP_OS,0,3) != 'WIN'){
+					print("\033[".$color."m");
+					print($msg);
+					print("\033[0m");
+				}else{
+					print($msg);
+				}
+			}
+		}
+		/**
+		 * 改行つきで色付きでプリント
 		 * @param string $msg
 		 * @param string $color ANSI Colors
 		 */
 		public static function println($msg='',$color='0'){
-			if(substr(PHP_OS,0,3) != 'WIN'){
-				print("\033[".$color."m");
-				print($msg.PHP_EOL);
-				print("\033[0m");
-			}else{
-				print($msg.PHP_EOL);
-			}
+			self::p($msg.PHP_EOL,$color);
 		}
 		/**
 		 * White
@@ -1631,11 +1677,7 @@ namespace{
 		return;
 	}
 	
-	/**
-	 * 基本の動作
-	 */
 	\testman\Args::init();
-	
 	$testdir = realpath(\testman\Args::value(getcwd().'/test'));
 	if($testdir === false){
 		die(\testman\Args::value().' found'.PHP_EOL);
@@ -1644,6 +1686,11 @@ namespace{
 		ob_start();
 			include_once($f);
 		ob_end_clean();
+	}
+	foreach(array('coverage','output','coverage-dir') as $k){
+		if(($v = \testman\Args::opt($k,null)) !== null && !is_bool($v)){
+			\testman\Conf::set($k,$v);
+		}
 	}
 	\testman\Std::println('testman [VERSION] (PHP '.phpversion().')'); // version
 	
@@ -1655,56 +1702,9 @@ namespace{
 		\testman\Std::println('  --output <file>    Log test execution in XML format to file');
 		\testman\Std::println('  --list [keyword]  List test files');
 		exit;
-	}
-	\testman\Runner::init($testdir);
-	
-	if(($keyword = \testman\Args::opt('list',false)) !== false){
-		$cwd = getcwd().DIRECTORY_SEPARATOR;
-
-		$summary = function($file){
-			$src = file_get_contents($file);
-			$summary = '';
-				
-			if(preg_match('/\/\*.+?\*\//s',$src,$m)){
-				list($summary) = explode(PHP_EOL,trim(
-					preg_replace('/@.+/','',
-						preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$m[0]))
-					)
-				));
-			}
-			return $summary;
-		};
-		$len = 8;
-		$test_list = array();
-		foreach(\testman\Runner::get_list($testdir) as $test_path){
-			if($keyword === true || strpos($test,$keyword) !== false){
-				$name = str_replace($cwd,'',$test_path);
-				
-				if($len < strlen($name)){
-					$len = strlen($name);
-				}
-				$test_list[$name] = $test_path;
-			}
-		}
-		
-		foreach($test_list as $name => $path){
-			\testman\Std::println('  '.str_pad($name,$len).' : '.$summary($path));
-		}
-		exit;
-	}
-
-	foreach(array('coverage','output','coverage-dir') as $k){
-		if(($v = \testman\Args::opt($k,null)) !== null && !is_bool($v)){
-			\testman\Conf::set($k,$v);
-		}
-	}
-	\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
-	\testman\Runner::start($testdir);
-	
-	if(\testman\Coverage::stop()){
-		\testman\Coverage::output(true);
-	}
-	if(\testman\Conf::has('output')){
-		\testman\Std::println_primary('Written Result:   '.\testman\Runner::output(\testman\Conf::get('output')).' ');
+	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
+		\testman\Finder::summary_list($testdir,$keyword);
+	}else{
+		\testman\Runner::start($testdir);
 	}
 }
