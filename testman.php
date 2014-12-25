@@ -184,9 +184,11 @@ namespace testman{
 			if(self::$start){
 				return self::$resultset;
 			}
-			if(!is_dir($testdir)){
+			if(!is_dir($testdir) && !is_file($testdir)){
 				throw new \InvalidArgumentException($testdir.' not found');
-			}			
+			}
+			self::$start = true;
+			
 			ini_set('display_errors','On');
 			ini_set('html_errors','Off');
 			ini_set('error_reporting',E_ALL);
