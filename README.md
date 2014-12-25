@@ -37,8 +37,10 @@
 	<?php
 	\ebi\Dt::setup();
 
-#Libs of the test
+#Class Library of the test
 	##test/testman.lib/Abc.php
+	
+	namespace is `test` only
 	
 	[Abc.php]
 		<?php
@@ -290,3 +292,7 @@
 		extract($plain,$name=null)
 
 
+
+# router for PHP Built-in server (automatic rewrite rules)
+
+	$ php -S localhost:8000 phar://test/testman.phar/router.php
