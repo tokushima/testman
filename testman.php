@@ -164,10 +164,15 @@ namespace testman{
 			return $test_list;
 		}		
 	}
+	class DefinedVarsRequireException extends \Exception{
+	}
+	class DefinedVarsInvalidTypeException extends \Exception{
+	}
 	class Runner{
 		static private $resultset = array();
 		static private $current_test;
 		static private $start = false;
+		static private $vars = array();
 		
 		/**
 		 * 現在実行しているテスト
@@ -409,35 +414,95 @@ namespace testman{
 			file_put_contents($output,$xml->asXML());
 				
 			return realpath($output);
-		}		
+		}
 		
+		private static $var_types = array();
+		
+		private static function exec_include($_is_setup,$_file){
+			extract(self::$vars);
+			include($_file);
+
+			if($_is_setup && preg_match('/\/\*.+?\*\//s',file_get_contents($_file),$_m)){
+				$_getvars = get_defined_vars();
 				
-		
-		private static function exec_before_after($test_file,$include_file){
+				if(preg_match_all('/@.+/',preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$_m[0])),$_as)){					
+					foreach($_as[0] as $_m){
+						if(preg_match("/@var\s+([^\s]+)\s+\\$(\w+)/",$_m,$_p)){
+							self::$var_types[$_p[2]] = $_p[1];
+						}else if(preg_match("/@var\s+\\$(\w+)/",$_m,$_p)){
+							self::$var_types[$_p[1]] = 'string';
+						}
+					}
+					foreach(self::$var_types as $k => $t){
+						if(!isset($_getvars[$k])){
+							throw new \testman\DefinedVarsRequireException($k.' required');
+						}
+						switch($t){
+							case 'string':
+								if(!is_string($_getvars[$k])){
+									throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+								}
+								break;
+							case 'integer':
+								if(!is_int($_getvars[$k])){
+									throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+								}
+								break;
+							case 'float':
+								if(!is_float($_getvars[$k])){
+									throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+								}
+								break;
+							case 'boolean':
+								if(!is_bool($_getvars[$k])){
+									throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+								}								
+								break;
+							default:
+								if($_getvars[$k] instanceof $t){
+									throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);									
+								}
+						}
+						self::$vars[$k] = $_getvars[$k];
+					}
+				}
+			}
+		}
+		private static function exec_setup_teardown($test_file,$is_setup){
+			$include_file = ($is_setup) ? '__setup__.php' : '__teardown__.php';
+
+			$inc = array();
 			if(strpos($test_file,getcwd()) === 0){
-				$inc = array();
 				$dir = dirname($test_file);
+				
 				while(strlen($dir) >= strlen(getcwd())){
 					if(is_file($f=($dir.'/'.$include_file))){
 						array_unshift($inc,$f);
 					}
 					$dir = dirname($dir);
 				}
-				if($include_file == '__after__.php'){
+				if(!$is_setup){
 					krsort($inc);
 				}
-				foreach($inc as $i) include($i);
 			}else if(is_file($f=(dirname($test_file).$include_file))){
-				include($f);
+				$inc[] = $f;
+			}
+			foreach($inc as $file){
+				self::exec_include($is_setup,$file);
 			}
 		}
 		private static function exec($test_file){
-			self::exec_before_after($test_file,'__before__.php');
+			self::$vars = array();
+			self::$var_types = array();
+			self::exec_setup_teardown($test_file,true);
 			self::$current_test = $test_file;
 			$test_exec_start_time = microtime(true);
 			
 			try{
 				ob_start();
+					foreach(self::$vars as $k => $v){
+						$$k = $v;
+					}
 					include($test_file);
 				$rtn = ob_get_clean();
 				
@@ -468,7 +533,7 @@ namespace testman{
 				ob_end_clean();
 			}
 			$res[1] = (round(microtime(true) - $test_exec_start_time,3));
-			self::exec_before_after($test_file,'__after__.php');
+			self::exec_setup_teardown($test_file,false);
 			self::$resultset[$test_file] = $res;
 			return $res[0];
 		}
@@ -1651,6 +1716,8 @@ namespace{
 			}
 		}
 	}
+	
+	// TODO
 	if(!function_exists('test_map_url')){
 		/**
 		 * mapに定義されたurlをフォーマットして返す
