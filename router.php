@@ -33,9 +33,13 @@ if(!is_file($dir.$uri)){
 	if(is_file($f=$dir.'/'.$entry.'.php')){
 		$_SERVER['PATH_INFO'] = '/'.$path;
 		
-		file_put_contents('php://stdout',date('[D M d H:i:s Y] ').basename($f).' [---]: '.$_SERVER['REQUEST_URI'].PHP_EOL);
-		include($f);		
+		file_put_contents('php://stdout',date('[D M d H:i:s Y] ').basename($f).' [200]: '.$_SERVER['REQUEST_URI'].PHP_EOL);
+		include($f);
+
 		return false;
+	}else{
+		file_put_contents('php://stdout',date('[D M d H:i:s Y] ').basename($f).' [404]: '.$_SERVER['REQUEST_URI'].' - No such file or directory'.PHP_EOL);
+		return false;		
 	}
 }
 return false;
