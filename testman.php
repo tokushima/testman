@@ -173,6 +173,8 @@ namespace testman{
 		static private $current_test;
 		static private $start = false;
 		static private $vars = array();
+		private static $var_types = array();
+		private static $var_current_types = array();
 		
 		/**
 		 * 現在実行しているテスト
@@ -415,57 +417,65 @@ namespace testman{
 				
 			return realpath($output);
 		}
-		
-		private static $var_types = array();
-		
 		private static function exec_include($_is_setup,$_file){
 			extract(self::$vars);
 			include($_file);
 
-			if($_is_setup && preg_match('/\/\*.+?\*\//s',file_get_contents($_file),$_m)){
+			if($_is_setup){
 				$_getvars = get_defined_vars();
-				
-				if(preg_match_all('/@.+/',preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$_m[0])),$_as)){					
-					foreach($_as[0] as $_m){
-						if(preg_match("/@var\s+([^\s]+)\s+\\$(\w+)/",$_m,$_p)){
-							self::$var_types[$_p[2]] = $_p[1];
-						}else if(preg_match("/@var\s+\\$(\w+)/",$_m,$_p)){
-							self::$var_types[$_p[1]] = 'string';
+
+				if(!isset(self::$var_types[$_file])){
+					self::$var_types[$_file] = array();
+					
+					if(preg_match('/\/\*.+?\*\//s',file_get_contents($_file),$_m)){
+						if(preg_match_all('/@.+/',preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$_m[0])),$_as)){					
+							foreach($_as[0] as $_m){
+								if(preg_match("/@var\s+([^\s]+)\s+\\$(\w+)/",$_m,$_p)){
+									self::$var_types[$_file][$_p[2]] = $_p[1];
+								}else if(preg_match("/@var\s+\\$(\w+)/",$_m,$_p)){
+									self::$var_types[$_file][$_p[1]] = 'string';
+								}
+							}
 						}
-					}
-					foreach(self::$var_types as $k => $t){
-						if(!isset($_getvars[$k])){
-							throw new \testman\DefinedVarsRequireException($k.' required');
-						}
-						switch($t){
-							case 'string':
-								if(!is_string($_getvars[$k])){
-									throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
-								}
-								break;
-							case 'integer':
-								if(!is_int($_getvars[$k])){
-									throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
-								}
-								break;
-							case 'float':
-								if(!is_float($_getvars[$k])){
-									throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
-								}
-								break;
-							case 'boolean':
-								if(!is_bool($_getvars[$k])){
-									throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
-								}								
-								break;
-							default:
-								if($_getvars[$k] instanceof $t){
-									throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);									
-								}
-						}
-						self::$vars[$k] = $_getvars[$k];
 					}
 				}
+				foreach(self::$var_types[$_file] as $k => $t){
+					if(!isset(self::$var_current_types[$k])){
+						self::$var_current_types[$k] = $t;
+					}
+				}
+				foreach(self::$var_current_types as $k => $t){					
+					if(!isset($_getvars[$k])){
+						throw new \testman\DefinedVarsRequireException($k.' required');
+					}
+					switch($t){
+						case 'string':
+							if(!is_string($_getvars[$k])){
+								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+							}
+							break;
+						case 'integer':
+							if(!is_int($_getvars[$k])){
+								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+							}
+							break;
+						case 'float':
+							if(!is_float($_getvars[$k])){
+								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+							}
+							break;
+						case 'boolean':
+							if(!is_bool($_getvars[$k])){
+								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+							}
+							break;
+						default:
+							if(!($_getvars[$k] instanceof $t)){
+								throw new \testman\DefinedVarsInvalidTypeException($k.'('.get_class($_getvars[$k]).') must be an '.$t);
+							}
+					}
+					self::$vars[$k] = $_getvars[$k];
+				} 
 			}
 		}
 		private static function exec_setup_teardown($test_file,$is_setup){
@@ -493,7 +503,7 @@ namespace testman{
 		}
 		private static function exec($test_file){
 			self::$vars = array();
-			self::$var_types = array();
+			self::$var_current_types = array();
 			self::exec_setup_teardown($test_file,true);
 			self::$current_test = $test_file;
 			$test_exec_start_time = microtime(true);
