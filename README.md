@@ -2,7 +2,7 @@
 
 (PHP 5 >= 5.3.0)
 
-![my image](testman.png)
+![my image](resources/image/testman.png)
 
 #Download
 	$ curl -LO http://git.io/testman.phar
