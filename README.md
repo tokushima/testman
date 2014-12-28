@@ -20,6 +20,14 @@
 
 	Generate report in XML format.
 
+\--list <keyword>
+
+	List test files.
+
+\--vars
+
+	List setup vars.
+
 #Config script file
 
 ##test/testman.settings.php

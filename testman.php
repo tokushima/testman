@@ -1811,6 +1811,7 @@ namespace{
 		\testman\Std::println('  --coverage <file>  Generate code coverage report in XML format.');
 		\testman\Std::println('  --output <file>    Log test execution in XML format to file');
 		\testman\Std::println('  --list [keyword]  List test files');
+		\testman\Std::println('  --vars  List setup vars');		
 		exit;
 	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
 		\testman\Finder::summary_list($testdir,$keyword);
