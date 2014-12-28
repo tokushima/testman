@@ -162,7 +162,77 @@ namespace testman{
 				\testman\Std::println('  '.str_pad($name,$len).' : '.$summary($path));
 			}
 			return $test_list;
-		}		
+		}
+		/**
+		 * 変数の説明
+		 * @param string $testdir
+		 */
+		public static function vars_list($testdir){
+			list($var_types,$inc_list,$target_dir) = self::setup_teardown_files($testdir, true);
+			
+			$nlen = $tlen = 0;
+			foreach($var_types as $name => $type){
+				if($nlen < strlen($name)){
+					$nlen = strlen($name);
+				}
+				if($tlen < strlen($type['type'])){
+					$tlen = strlen($type['type']);
+				}
+			}
+			\testman\Std::println_success(' '.$target_dir);
+			
+			ksort($var_types);
+			foreach($var_types as $name => $type){
+				\testman\Std::println('  '.str_pad($type['type'],$tlen).' $'.str_pad($name,$nlen).' : '.$type['desc']);				
+			}
+		}
+		/**
+		 * setup/teardownを探す
+		 * @param string $dir
+		 * @param boolean $is_setup
+		 * @return string[]
+		 */
+		public static function setup_teardown_files($testdir,$is_setup){
+			if(is_dir($dir=$testdir) || is_dir($dir=dirname($testdir))){
+				$file = ($is_setup) ? '__setup__.php' : '__teardown__.php';
+				$inc_list = array();
+				$var_types = array();
+				$target_dir = $dir;
+		
+				while(strlen($dir) >= strlen(getcwd())){
+					if(is_file($f=($dir.'/'.$file))){
+						$varnames = array();
+						
+						if($is_setup && preg_match('/\/\*.+?\*\//s',file_get_contents($f),$_m)){
+							if(preg_match_all('/@.+/',preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$_m[0])),$_as)){
+								foreach($_as[0] as $_m){
+									if(preg_match("/@var\s+([^\s]+)\s+\\$(\w+)(.*)/",$_m,$_p)){
+										$var_types[$_p[2]]['type'] = $_p[1];
+										if(!isset($var_types[$_p[2]]['desc']) || empty($var_types[$_p[2]]['desc'])){
+											$var_types[$_p[2]]['desc'] = trim($_p[3]);
+										}
+										$varnames[] = $_p[2];
+									}else if(preg_match("/@var\s+\\$(\w+)(.*)/",$_m,$_p)){
+										$var_types[$_p[1]]['type'] = 'string';
+										if(!isset($var_types[$_p[1]]['desc']) || empty($var_types[$_p[1]]['desc'])){
+											$var_types[$_p[1]]['desc'] = trim($_p[2]);
+										}
+										$varnames[] = $_p[1];
+									}
+								}
+							}
+						}
+						$inc_list[] = array('path'=>$f,'vars'=>$varnames);
+					}
+					$dir = dirname($dir);
+				}
+				if($is_setup){
+					krsort($inc_list);
+				}
+				return array($var_types,$inc_list,$target_dir);
+			}
+			return array(array(),array(),'');
+		}
 	}
 	class DefinedVarsRequireException extends \Exception{
 	}
@@ -173,8 +243,6 @@ namespace testman{
 		static private $current_test;
 		static private $start = false;
 		static private $vars = array();
-		private static $var_types = array();
-		private static $var_current_types = array();
 		
 		/**
 		 * 現在実行しているテスト
@@ -417,61 +485,43 @@ namespace testman{
 				
 			return realpath($output);
 		}
-		private static function exec_include($_is_setup,$_file){
+		private static function exec_include($_is_setup,$_inc,$_var_types){
 			extract(self::$vars);
-			include($_file);
+			include($_inc['path']);
 
 			if($_is_setup){
 				$_getvars = get_defined_vars();
-
-				if(!isset(self::$var_types[$_file])){
-					self::$var_types[$_file] = array();
+				
+				foreach($_inc['vars'] as $k){
+					$type = $_var_types[$k]['type'];
 					
-					if(preg_match('/\/\*.+?\*\//s',file_get_contents($_file),$_m)){
-						if(preg_match_all('/@.+/',preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$_m[0])),$_as)){					
-							foreach($_as[0] as $_m){
-								if(preg_match("/@var\s+([^\s]+)\s+\\$(\w+)/",$_m,$_p)){
-									self::$var_types[$_file][$_p[2]] = $_p[1];
-								}else if(preg_match("/@var\s+\\$(\w+)/",$_m,$_p)){
-									self::$var_types[$_file][$_p[1]] = 'string';
-								}
-							}
-						}
-					}
-				}
-				foreach(self::$var_types[$_file] as $k => $t){
-					if(!isset(self::$var_current_types[$k])){
-						self::$var_current_types[$k] = $t;
-					}
-				}
-				foreach(self::$var_current_types as $k => $t){					
 					if(!isset($_getvars[$k])){
 						throw new \testman\DefinedVarsRequireException($k.' required');
 					}
-					switch($t){
+					switch($type){
 						case 'string':
 							if(!is_string($_getvars[$k])){
-								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
 							}
 							break;
 						case 'integer':
 							if(!is_int($_getvars[$k])){
-								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
 							}
 							break;
 						case 'float':
 							if(!is_float($_getvars[$k])){
-								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
 							}
 							break;
 						case 'boolean':
 							if(!is_bool($_getvars[$k])){
-								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$t);
+								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
 							}
 							break;
 						default:
-							if(!($_getvars[$k] instanceof $t)){
-								throw new \testman\DefinedVarsInvalidTypeException($k.'('.get_class($_getvars[$k]).') must be an '.$t);
+							if(!($_getvars[$k] instanceof $type)){
+								throw new \testman\DefinedVarsInvalidTypeException($k.'('.get_class($_getvars[$k]).') must be an '.$types);
 							}
 					}
 					self::$vars[$k] = $_getvars[$k];
@@ -479,31 +529,13 @@ namespace testman{
 			}
 		}
 		private static function exec_setup_teardown($test_file,$is_setup){
-			$include_file = ($is_setup) ? '__setup__.php' : '__teardown__.php';
-
-			$inc = array();
-			if(strpos($test_file,getcwd()) === 0){
-				$dir = dirname($test_file);
-				
-				while(strlen($dir) >= strlen(getcwd())){
-					if(is_file($f=($dir.'/'.$include_file))){
-						array_unshift($inc,$f);
-					}
-					$dir = dirname($dir);
-				}
-				if(!$is_setup){
-					krsort($inc);
-				}
-			}else if(is_file($f=(dirname($test_file).$include_file))){
-				$inc[] = $f;
-			}
-			foreach($inc as $file){
-				self::exec_include($is_setup,$file);
+			list($var_types,$inc_list,$target_dir) = \testman\Finder::setup_teardown_files($test_file,$is_setup);
+			foreach($inc_list as $inc){
+				self::exec_include($is_setup,$inc,$var_types);
 			}
 		}
 		private static function exec($test_file){
 			self::$vars = array();
-			self::$var_current_types = array();
 			self::exec_setup_teardown($test_file,true);
 			self::$current_test = $test_file;
 			$test_exec_start_time = microtime(true);
@@ -1727,7 +1759,6 @@ namespace{
 		}
 	}
 	
-	// TODO
 	if(!function_exists('test_map_url')){
 		/**
 		 * mapに定義されたurlをフォーマットして返す
@@ -1783,6 +1814,8 @@ namespace{
 		exit;
 	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
 		\testman\Finder::summary_list($testdir,$keyword);
+	}else if((\testman\Args::opt('vars',false)) !== false){
+		\testman\Finder::vars_list($testdir);		
 	}else{
 		\testman\Runner::start($testdir);
 	}
