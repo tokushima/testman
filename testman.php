@@ -1816,7 +1816,7 @@ namespace{
 	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
 		\testman\Finder::summary_list($testdir,$keyword);
 	}else if((\testman\Args::opt('vars',false)) !== false){
-		\testman\Finder::vars_list($testdir);		
+		\testman\Finder::vars_list($testdir);
 	}else{
 		\testman\Runner::start($testdir);
 	}
