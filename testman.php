@@ -519,6 +519,14 @@ namespace testman{
 								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
 							}
 							break;
+						case 'function':
+							if(isset(self::$vars[$k])){
+								throw new \testman\DefinedVarsInvalidTypeException($k.' not overwrite');
+							}
+							if(!is_callable($_getvars[$k])){
+								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
+							}
+							break;							
 						default:
 							if(!($_getvars[$k] instanceof $type)){
 								throw new \testman\DefinedVarsInvalidTypeException($k.'('.get_class($_getvars[$k]).') must be an '.$types);
@@ -536,8 +544,8 @@ namespace testman{
 		}
 		private static function exec($test_file){
 			self::$vars = array();
+			self::$current_test = $test_file;			
 			self::exec_setup_teardown($test_file,true);
-			self::$current_test = $test_file;
 			$test_exec_start_time = microtime(true);
 			
 			try{
