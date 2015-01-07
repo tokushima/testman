@@ -488,7 +488,7 @@ namespace testman{
 		private static function exec_include($_is_setup,$_inc,$_var_types){
 			extract(self::$vars);
 			include($_inc['path']);
-
+			
 			if($_is_setup){
 				$_getvars = get_defined_vars();
 				
@@ -528,8 +528,11 @@ namespace testman{
 							}
 							break;							
 						default:
+							if(!is_object($_getvars[$k])){
+								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);								
+							}
 							if(!($_getvars[$k] instanceof $type)){
-								throw new \testman\DefinedVarsInvalidTypeException($k.'('.get_class($_getvars[$k]).') must be an '.$types);
+								throw new \testman\DefinedVarsInvalidTypeException($k.'('.get_class($_getvars[$k]).') must be an '.$type);
 							}
 					}
 					self::$vars[$k] = $_getvars[$k];
@@ -538,18 +541,21 @@ namespace testman{
 		}
 		private static function exec_setup_teardown($test_file,$is_setup){
 			list($var_types,$inc_list,$target_dir) = \testman\Finder::setup_teardown_files($test_file,$is_setup);
+			
 			foreach($inc_list as $inc){
 				self::exec_include($is_setup,$inc,$var_types);
 			}
 		}
 		private static function exec($test_file){
 			self::$vars = array();
-			self::$current_test = $test_file;			
-			self::exec_setup_teardown($test_file,true);
-			$test_exec_start_time = microtime(true);
+			self::$current_test = $test_file;
 			
 			try{
 				ob_start();
+					self::exec_setup_teardown($test_file,true);
+					$test_exec_start_time = microtime(true);
+
+				
 					foreach(self::$vars as $k => $v){
 						$$k = $v;
 					}
@@ -562,7 +568,7 @@ namespace testman{
 							: $m[0]);
 					throw new \RuntimeException($err);
 				}
-				$res = array(1,0);
+				$res = array(1,(round(microtime(true) - $test_exec_start_time,3)));
 			}catch(\testman\AssertFailure $e){
 				list($debug) = $e->getTrace();
 				$res = array(-1,0,$debug['file'],$debug['line'],$e->getMessage(),$e->expectation(),$e->result(),$e->has());
@@ -582,7 +588,6 @@ namespace testman{
 				}
 				ob_end_clean();
 			}
-			$res[1] = (round(microtime(true) - $test_exec_start_time,3));
 			self::exec_setup_teardown($test_file,false);
 			self::$resultset[$test_file] = $res;
 			return $res[0];
@@ -1433,7 +1438,7 @@ namespace testman{
 				fclose($fp);
 			}
 			if(($err_code = curl_errno($this->resource)) > 0){
-				if($err_code == 47) return $this;
+				if($err_code == 47 || $err_code == 52) return $this;
 				throw new \RuntimeException($err_code.': '.curl_error($this->resource).', ['.$method.'] '.$url);
 			}
 	
