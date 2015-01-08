@@ -161,6 +161,8 @@ namespace testman{
 			foreach($test_list as $name => $path){
 				\testman\Std::println('  '.str_pad($name,$len).' : '.$summary($path));
 			}
+			\testman\Std::println();
+			
 			return $test_list;
 		}
 		/**
@@ -372,7 +374,7 @@ namespace testman{
 							
 						\testman\Std::println();
 						\testman\Std::println_primary($testfile);
-						\testman\Std::println_danger('['.$line.']: '.$msg);
+						\testman\Std::println_danger(' ['.$line.']: '.$msg);
 							
 						if($has){
 							\testman\Std::println($tab.str_repeat('-',70));
@@ -391,10 +393,14 @@ namespace testman{
 					case -2:
 						$exception++;
 						list(,$time,$file,$line,$msg) = $info;
-							
+						
+						$msgarr = explode(PHP_EOL,$msg);
+						$summary = array_shift($msgarr);
+						
 						\testman\Std::println();
 						\testman\Std::println_primary($testfile);
-						\testman\Std::println_danger('['.$line.']: '.$msg);
+						\testman\Std::println_danger(' ['.$line.']: '.$summary);
+						\testman\Std::println($tab.implode(PHP_EOL.$tab,$msgarr));
 						break;
 				}
 			}
@@ -408,6 +414,8 @@ namespace testman{
 			if(\testman\Coverage::stop()){
 				\testman\Coverage::output();
 			}
+			\testman\Std::println();
+			
 			return self::$resultset;
 		}
 		
@@ -1843,8 +1851,8 @@ namespace{
 		\testman\Std::println('  --coverage <file>  Generate code coverage report in XML format.');
 		\testman\Std::println('  --output <file>    Log test execution in XML format to file');
 		\testman\Std::println('  --list [keyword]  List test files');
-		\testman\Std::println('  --vars  List setup vars');		
-		exit;
+		\testman\Std::println('  --vars  List setup vars');
+		\testman\Std::println();
 	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
 		\testman\Finder::summary_list($testdir,$keyword);
 	}else if((\testman\Args::opt('info',false)) !== false){
