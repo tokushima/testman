@@ -164,12 +164,16 @@ namespace testman{
 			return $test_list;
 		}
 		/**
-		 * 変数の説明
+		 * setupの説明
 		 * @param string $testdir
 		 */
-		public static function vars_list($testdir){
+		public static function setup_info($testdir){
 			list($var_types,$inc_list,$target_dir) = self::setup_teardown_files($testdir, true);
 			
+			$summary_list = array();
+			foreach($inc_list as $inc){
+				$summary_list[] = empty($inc['summary']) ? '[NONE]' : $inc['summary'];
+			}
 			$nlen = $tlen = 0;
 			foreach($var_types as $name => $type){
 				if($nlen < strlen($name)){
@@ -179,12 +183,21 @@ namespace testman{
 					$tlen = strlen($type['type']);
 				}
 			}
-			\testman\Std::println_success(' '.$target_dir);
+			\testman\Std::println_primary('Dir:');
+			\testman\Std::println('  '.$target_dir);
+			\testman\Std::println();
+			
+			\testman\Std::println_primary('Summary:');
+			\testman\Std::println('  '.implode(' > ',$summary_list));
+			\testman\Std::println();
 			
 			ksort($var_types);
+			
+			\testman\Std::println_primary('Vars:');
 			foreach($var_types as $name => $type){
-				\testman\Std::println('  '.str_pad($type['type'],$tlen).' $'.str_pad($name,$nlen).' : '.$type['desc']);				
+				\testman\Std::println('  '.str_pad($type['type'],$tlen).' $'.str_pad($name,$nlen).' : '.$type['desc']);
 			}
+			\testman\Std::println();
 		}
 		/**
 		 * setup/teardownを探す
@@ -202,9 +215,12 @@ namespace testman{
 				while(strlen($dir) >= strlen(getcwd())){
 					if(is_file($f=($dir.'/'.$file))){
 						$varnames = array();
+						$summary = null;
 						
 						if($is_setup && preg_match('/\/\*.+?\*\//s',file_get_contents($f),$_m)){
-							if(preg_match_all('/@.+/',preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$_m[0])),$_as)){
+							$desc = preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$_m[0]));
+							
+							if(preg_match_all('/@.+/',$desc,$_as)){
 								foreach($_as[0] as $_m){
 									if(preg_match("/@var\s+([^\s]+)\s+\\$(\w+)(.*)/",$_m,$_p)){
 										$var_types[$_p[2]]['type'] = $_p[1];
@@ -221,8 +237,9 @@ namespace testman{
 									}
 								}
 							}
+							list($summary) = explode(PHP_EOL,trim(preg_replace('/@.+/','',$desc)));
 						}
-						$inc_list[] = array('path'=>$f,'vars'=>$varnames);
+						$inc_list[] = array('path'=>$f,'vars'=>$varnames,'summary'=>$summary);
 					}
 					$dir = dirname($dir);
 				}
@@ -1519,10 +1536,11 @@ namespace testman{
 		}
 		/**
 		 * bodyを解析しXMLオブジェクトとして返す
+		 * @param string $name
 		 * @return \testman\Xml
 		 */
-		public function xml(){
-			return \testman\Xml::extract($this->body());
+		public function xml($name=null){
+			return \testman\Xml::extract($this->body(),$name);
 		}
 	}
 	class Args{
@@ -1828,8 +1846,8 @@ namespace{
 		exit;
 	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
 		\testman\Finder::summary_list($testdir,$keyword);
-	}else if((\testman\Args::opt('vars',false)) !== false){
-		\testman\Finder::vars_list($testdir);
+	}else if((\testman\Args::opt('info',false)) !== false){
+		\testman\Finder::setup_info($testdir);
 	}else{
 		\testman\Runner::start($testdir);
 	}
