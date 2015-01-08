@@ -361,7 +361,7 @@ namespace testman{
 			\testman\Std::println();
 			\testman\Std::println_warning('Results:');
 		
-			foreach(self::$resultset as $file => $info){
+			foreach(self::$resultset as $testfile => $info){
 				switch($info[0]){
 					case 1:
 						$success++;
@@ -371,7 +371,7 @@ namespace testman{
 						list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
 							
 						\testman\Std::println();
-						\testman\Std::println_primary($file);
+						\testman\Std::println_primary($testfile);
 						\testman\Std::println_danger('['.$line.']: '.$msg);
 							
 						if($has){
@@ -393,7 +393,7 @@ namespace testman{
 						list(,$time,$file,$line,$msg) = $info;
 							
 						\testman\Std::println();
-						\testman\Std::println_primary($file);
+						\testman\Std::println_primary($testfile);
 						\testman\Std::println_danger('['.$line.']: '.$msg);
 						break;
 				}
@@ -606,7 +606,7 @@ namespace testman{
 				ob_end_clean();
 			}
 			self::exec_setup_teardown($test_file,false);
-			self::$resultset[$test_file] = $res;
+			self::$resultset[str_replace(getcwd().DIRECTORY_SEPARATOR,'',$test_file)] = $res;
 			return $res[0];
 		}
 	}
@@ -1833,12 +1833,13 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	\testman\Std::println('testman [VERSION] (PHP '.phpversion().')'); // version
+	$version = '0.5.5';
+	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
-		\testman\Std::println('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
+		\testman\Std::println_info('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
 		\testman\Std::println();
-		\testman\Std::println('Options:');
+		\testman\Std::println_primary('Options:');
 		\testman\Std::println('  --coverage <file>  Generate code coverage report in XML format.');
 		\testman\Std::println('  --output <file>    Log test execution in XML format to file');
 		\testman\Std::println('  --list [keyword]  List test files');
