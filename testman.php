@@ -135,8 +135,7 @@ namespace testman{
 		public static function summary_list($testdir,$keyword=''){
 			$cwd = getcwd().DIRECTORY_SEPARATOR;
 		
-			$summary = function($file){
-				$src = file_get_contents($file);
+			$summary = function($src){
 				$summary = '';
 					
 				if(preg_match('/\/\*.+?\*\//s',$src,$m)){
@@ -151,17 +150,19 @@ namespace testman{
 			$len = 8;
 			$test_list = array();
 			foreach(self::get_list($testdir) as $test_path){
-				if($keyword === true || strpos($test_path,$keyword) !== false){
+				$src = file_get_contents($test_path);
+								
+				if($keyword === true || strpos($test_path,$keyword) !== false || strpos($src,$keyword) !== false){
 					$name = str_replace($cwd,'',$test_path);
 		
 					if($len < strlen($name)){
 						$len = strlen($name);
 					}
-					$test_list[$name] = $test_path;
+					$test_list[$name] = array('path'=>$test_path,'summary'=>$summary($src));
 				}
 			}
-			foreach($test_list as $name => $path){
-				\testman\Std::println('  '.str_pad($name,$len).' : '.$summary($path));
+			foreach($test_list as $name => $info){
+				\testman\Std::println('  '.str_pad($name,$len).' : '.$info['summary']);
 			}
 			\testman\Std::println();
 			
@@ -187,17 +188,17 @@ namespace testman{
 					$tlen = strlen($type['type']);
 				}
 			}
-			\testman\Std::println_primary('Dir:');
+			\testman\Std::println_warning('Dir:');
 			\testman\Std::println('  '.$target_dir);
 			\testman\Std::println();
 			
-			\testman\Std::println_primary('Summary:');
+			\testman\Std::println_warning('Summary:');
 			\testman\Std::println('  '.implode(' > ',$summary_list));
 			\testman\Std::println();
 			
 			ksort($var_types);
 			
-			\testman\Std::println_primary('Vars:');
+			\testman\Std::println_warning('Vars:');
 			foreach($var_types as $name => $type){
 				\testman\Std::println('  '.str_pad($type['type'],$tlen).' $'.str_pad($name,$nlen).' : '.$type['desc']);
 			}
@@ -363,7 +364,7 @@ namespace testman{
 		
 			\testman\Std::println();
 			\testman\Std::println_warning('Results:');
-// TODO		
+			
 			$tab = '   ';
 			foreach(self::$resultset as $testfile => $info){
 				switch($info[0]){
@@ -1883,10 +1884,10 @@ namespace{
 		\testman\Std::println_info('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
 		\testman\Std::println();
 		\testman\Std::println_primary('Options:');
-		\testman\Std::println('  --coverage <file>  Generate code coverage report in XML format.');
-		\testman\Std::println('  --output <file>    Log test execution in XML format to file');
+		\testman\Std::println('  --coverage <file> Generate code coverage report in XML format.');
+		\testman\Std::println('  --output <file>   Log test execution in XML format to file');
 		\testman\Std::println('  --list [keyword]  List test files');
-		\testman\Std::println('  --vars  List setup vars');
+		\testman\Std::println('  --info            Info setup[s]');
 		\testman\Std::println();
 	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
 		\testman\Finder::summary_list($testdir,$keyword);

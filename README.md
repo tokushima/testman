@@ -24,9 +24,9 @@
 
 	List test files.
 
-\--vars
+\--info
 
-	List setup vars.
+	Info setup[s].
 
 #Config script file
 
@@ -106,8 +106,8 @@
 
 
 #Special script file
-	__before__.php
-	__after__.php
+	__setup__.php
+	__teardown__.php
 
 
 #Util
@@ -141,9 +141,17 @@
 
 		/**
 		 * bodyを解析しXMLオブジェクトとして返す
+		 * @param string $name node名
 		 * @return \testman\Xml
 		 */
-		xml()
+		xml($name=null)
+		
+		/**
+		 * bodyをJsonとして解析し連想配列を返す
+		 * @param string $name キー名
+		 * @return \testman\Xml
+		 */
+		json($name=null)		
 		
 		/**
 		 * 最終実行URL
