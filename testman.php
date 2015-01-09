@@ -1555,6 +1555,27 @@ namespace testman{
 		public function xml($name=null){
 			return \testman\Xml::extract($this->body(),$name);
 		}
+		/**
+		 * bodyを解析し配列として返す
+		 * @param string $name
+		 * @param string $delimiter
+		 */
+		public function json($name=null,$delimiter='/'){
+			$array = json_decode($this->body(),true);
+			
+			if($array === false){
+				throw new \testman\NotFoundException('Invalid data');
+			}
+			$names = explode($delimiter,$name);
+			foreach($names as $key){
+				if(array_key_exists($key,$array)){
+					$array = $array[$key];
+				}else{
+					throw new \testman\NotFoundException($name.' not found');
+				}
+			}
+			return $array;
+		}
 	}
 	class Args{
 		static private $opt = array();
@@ -1855,7 +1876,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.5.5';
+	$version = '0.5.6';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
