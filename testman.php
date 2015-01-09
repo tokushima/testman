@@ -55,6 +55,7 @@ namespace testman{
 	}
 	class NotFoundException extends \Exception{
 	}
+	// TODO
 	class AssertFailure extends \Exception{
 		private $expectation;
 		private $result;
@@ -66,6 +67,7 @@ namespace testman{
 			$this->has = true;
 			return $this;
 		}
+
 		public function has(){
 			return $this->has;
 		}
@@ -325,7 +327,6 @@ namespace testman{
 				include_once($f);
 			}
 			$testdir = realpath($testdir);
-			$tab = '  ';
 			$success = $fail = $exception = $exe_time = $use_memory = 0;
 		
 			\testman\Std::println_warning('Progress:');
@@ -362,7 +363,8 @@ namespace testman{
 		
 			\testman\Std::println();
 			\testman\Std::println_warning('Results:');
-		
+// TODO		
+			$tab = '   ';
 			foreach(self::$resultset as $testfile => $info){
 				switch($info[0]){
 					case 1:
@@ -373,17 +375,19 @@ namespace testman{
 						list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
 							
 						\testman\Std::println();
-						\testman\Std::println_primary($testfile);
-						\testman\Std::println_danger(' ['.$line.']: '.$msg);
+						\testman\Std::println_primary(' '.$testfile);
+						\testman\Std::println_danger('  ['.$line.']: '.$msg);
 							
 						if($has){
-							\testman\Std::println($tab.str_repeat('-',70));
+							$expectation = ' expect ';
+							\testman\Std::println_white($tab.str_repeat('-',(73-strlen($expectation))).$expectation.str_repeat('-',3));
 							ob_start();
 								var_dump($r1);
 							$diff1 = ob_get_clean();
 							\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff1));
 		
-							\testman\Std::println($tab.str_repeat('-',70));
+							$result = ' result ';
+							\testman\Std::println_white($tab.str_repeat('-',(73-strlen($result))).$result.str_repeat('-',3));
 							ob_start();
 								var_dump($r2);
 							$diff2 = ob_get_clean();
@@ -398,8 +402,8 @@ namespace testman{
 						$summary = array_shift($msgarr);
 						
 						\testman\Std::println();
-						\testman\Std::println_primary($testfile);
-						\testman\Std::println_danger(' ['.$line.']: '.$summary);
+						\testman\Std::println_primary(' '.$testfile);
+						\testman\Std::println_danger('  ['.$line.']: '.$summary);
 						\testman\Std::println($tab.implode(PHP_EOL.$tab,$msgarr));
 						break;
 				}
@@ -596,6 +600,7 @@ namespace testman{
 				$res = array(1,(round(microtime(true) - $test_exec_start_time,3)));
 			}catch(\testman\AssertFailure $e){
 				list($debug) = $e->getTrace();
+				// TODO
 				$res = array(-1,0,$debug['file'],$debug['line'],$e->getMessage(),$e->expectation(),$e->result(),$e->has());
 				ob_end_clean();
 			}catch(\Exception $e){
@@ -1651,7 +1656,7 @@ namespace testman{
 		 * White
 		 * @param string $msg
 		 */
-		public static function println_default($msg){
+		public static function println_white($msg){
 			self::println($msg,'37');
 		}
 		/**
@@ -1758,6 +1763,7 @@ namespace{
 			}
 		}
 	}
+	// TODO
 	if(!function_exists('neq')){
 		/**
 		 * 等しくない
@@ -1781,7 +1787,11 @@ namespace{
 		 */
 		function meq($keyword,$src,$msg='failure match'){
 			if(mb_strpos($src,$keyword) === false){
-				throw new \testman\AssertFailure($msg);
+				$failure = new \testman\AssertFailure($msg);
+				if(strlen($src) > 80){
+					$src = substr($src,0,80).' ...';
+				}
+				throw $failure->ab($keyword,$src);
 			}
 		}
 	}
@@ -1793,7 +1803,11 @@ namespace{
 		 */
 		function mneq($keyword,$src,$msg='failure not match'){
 			if(mb_strpos($src,$keyword) !== false){
-				throw new \testman\AssertFailure($msg);
+				$failure = new \testman\AssertFailure($msg);
+				if(strlen($src) > 80){
+					$src = substr($src,0,80).' ...';
+				}				
+				throw $failure->ab($keyword,$src);
 			}
 		}
 	}
