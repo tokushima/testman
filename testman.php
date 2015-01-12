@@ -55,7 +55,6 @@ namespace testman{
 	}
 	class NotFoundException extends \Exception{
 	}
-	// TODO
 	class AssertFailure extends \Exception{
 		private $expectation;
 		private $result;
@@ -171,8 +170,9 @@ namespace testman{
 		/**
 		 * setupの説明
 		 * @param string $testdir
+		 * @param boolean $source
 		 */
-		public static function setup_info($testdir){
+		public static function setup_info($testdir,$source=false){
 			list($var_types,$inc_list,$target_dir) = self::setup_teardown_files($testdir, true);
 			
 			$summary_list = array();
@@ -201,6 +201,26 @@ namespace testman{
 			\testman\Std::println_warning('Vars:');
 			foreach($var_types as $name => $type){
 				\testman\Std::println('  '.str_pad($type['type'],$tlen).' $'.str_pad($name,$nlen).' : '.$type['desc']);
+			}
+			\testman\Std::println();
+			
+			if($source){
+				\testman\Std::println_warning('Source:');
+				\testman\Std::println();
+				
+				foreach($inc_list as $inc){
+					\testman\Std::println_info('// '.str_repeat('-', 77));
+					\testman\Std::println_info('// path:    '.$inc['path']);
+					\testman\Std::println_info('// summary: '.$inc['summary']);
+					\testman\Std::println_info('// '.str_repeat('-', 77));
+					
+					$src = file_get_contents($inc['path']);
+					$src = trim(preg_replace('/^[\s]*<\?php/','',$src));
+					$src = preg_replace('/\/\*.+?\*\//s','',$src);
+					
+					\testman\Std::println_white($src);
+					\testman\Std::println();
+				}
 			}
 			\testman\Std::println();
 		}
@@ -1892,7 +1912,7 @@ namespace{
 	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
 		\testman\Finder::summary_list($testdir,$keyword);
 	}else if((\testman\Args::opt('info',false)) !== false){
-		\testman\Finder::setup_info($testdir);
+		\testman\Finder::setup_info($testdir,\testman\Args::opt('source',false));
 	}else{
 		\testman\Runner::start($testdir);
 	}
