@@ -53,6 +53,15 @@ namespace testman{
 			return null;
 		}
 	}
+	class Resource{
+		public static function path($file){
+			$dir = \testman\Conf::has_settings('resources');
+			if(is_file($f=$dir.'/'.$file)){
+				return realpath($f);
+			}
+			throw new \testman\NotFoundException($file.' not found');
+		}
+	}
 	class NotFoundException extends \Exception{
 	}
 	class AssertFailure extends \Exception{
@@ -209,16 +218,16 @@ namespace testman{
 				\testman\Std::println();
 				
 				foreach($inc_list as $inc){
-					\testman\Std::println_info('// '.str_repeat('-', 77));
-					\testman\Std::println_info('// path:    '.$inc['path']);
-					\testman\Std::println_info('// summary: '.$inc['summary']);
-					\testman\Std::println_info('// '.str_repeat('-', 77));
+					\testman\Std::println_white('// '.str_repeat('-', 77));
+					\testman\Std::println_white('// path:    '.$inc['path']);
+					\testman\Std::println_white('// summary: '.$inc['summary']);
+					\testman\Std::println_white('// '.str_repeat('-', 77));
 					
 					$src = file_get_contents($inc['path']);
 					$src = trim(preg_replace('/^[\s]*<\?php/','',$src));
 					$src = preg_replace('/\/\*.+?\*\//s','',$src);
 					
-					\testman\Std::println_white($src);
+					\testman\Std::println_info($src);
 					\testman\Std::println();
 				}
 			}
@@ -1065,8 +1074,19 @@ namespace testman{
 		 * @return \testman\Xml
 		 */
 		public static function extract($plain,$name=null){
-			if(!(!empty($name) && strpos($plain,$name) === false) && self::find_extract($x,$plain,$name)){
-				return $x;
+			if(!empty($name)){
+				$names = explode('/',$name,2);
+				$name = $names[0];
+			}
+			if(self::find_extract($x,$plain,$name)){
+				if(!isset($name[1])){
+					return $x;
+				}else{
+					try{
+						return $x->find_get($name[1]);
+					}catch(\testman\NotFoundException $e){
+					}
+				}
 			}
 			throw new \testman\NotFoundException($name.' not found');
 		}
@@ -1897,7 +1917,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.5.6';
+	$version = '0.5.7';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
