@@ -1801,13 +1801,13 @@ namespace{
 	}
 	
 	// set functions
-	if(!function_exists('failure')){
+	if(!function_exists('fail')){
 		/**
 		 * 失敗とする
 		 * @param string $msg 失敗時メッセージ
 		 * @throws \testman\AssertFailure
 		 */
-		function failure($msg='failure'){
+		function fail($msg='failure'){
 			throw new \testman\AssertFailure($msg);
 		}
 	}
@@ -1825,7 +1825,6 @@ namespace{
 			}
 		}
 	}
-	// TODO
 	if(!function_exists('neq')){
 		/**
 		 * 等しくない
@@ -1874,14 +1873,14 @@ namespace{
 		}
 	}
 	
-	if(!function_exists('test_map_url')){
+	if(!function_exists('url')){
 		/**
 		 * mapに定義されたurlをフォーマットして返す
 		 * @param string $map_name
 		 * @throws \RuntimeException
 		 * @return string
 		 */
-		function test_map_url($map_name){
+		function url($map_name){
 			$args = func_get_args();
 			array_shift($args);
 			$urls = \testman\Conf::get('urls',array());
@@ -1893,6 +1892,15 @@ namespace{
 				return vsprintf($urls[$map_name],$args);
 			}
 			throw new \testman\NotFoundException($map_name.(isset($urls[$map_name]) ? '['.sizeof($args).']' : '').' not found');
+		}
+	}
+	if(!function_exists('b')){
+		/**
+		 * ブラウザを返す
+		 * @return \testman\Browser
+		 */
+		function b(){
+			return \testman\Browser();
 		}
 	}	
 	
@@ -1917,7 +1925,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.5.7';
+	$version = '0. 6.0';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
