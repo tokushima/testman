@@ -63,7 +63,7 @@
 	 * @param string $msg 失敗時メッセージ
 	 * @throws \testman\AssertFailure
 	 */
-	failure($msg='failure')
+	fail($msg='failure')
 
 	/**
 	 *　等しい
@@ -102,8 +102,12 @@
 	 * @throws \RuntimeException
 	 * @return string
 	 */
-	test_map_url($map_name)
+	url($map_name)
 
+	/**
+	 * \testman\Browser()
+	 */
+	b()
 
 #Special script file
 	__setup__.php

@@ -630,7 +630,6 @@ namespace testman{
 				$res = array(1,(round(microtime(true) - $test_exec_start_time,3)));
 			}catch(\testman\AssertFailure $e){
 				list($debug) = $e->getTrace();
-				// TODO
 				$res = array(-1,0,$debug['file'],$debug['line'],$e->getMessage(),$e->expectation(),$e->result(),$e->has());
 				ob_end_clean();
 			}catch(\Exception $e){
@@ -1900,7 +1899,7 @@ namespace{
 		 * @return \testman\Browser
 		 */
 		function b(){
-			return \testman\Browser();
+			return new \testman\Browser();
 		}
 	}	
 	
@@ -1925,7 +1924,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0. 6.0';
+	$version = '0.6.0';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
