@@ -1078,13 +1078,14 @@ namespace testman{
 				$name = $names[0];
 			}
 			if(self::find_extract($x,$plain,$name)){
-				if(!isset($name[1])){
-					return $x;
-				}else{
+				if(isset($names[1])){
 					try{
-						return $x->find_get($name[1]);
+						return $x->find_get($names[1]);
 					}catch(\testman\NotFoundException $e){
+						throw $e;
 					}
+				}else{
+					return $x;
 				}
 			}
 			throw new \testman\NotFoundException($name.' not found');
