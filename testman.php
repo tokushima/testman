@@ -578,14 +578,6 @@ namespace testman{
 								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
 							}
 							break;
-						case 'function':
-							if(isset(self::$vars[$k])){
-								throw new \testman\DefinedVarsInvalidTypeException($k.' not overwrite');
-							}
-							if(!is_callable($_getvars[$k])){
-								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
-							}
-							break;							
 						default:
 							if(!is_object($_getvars[$k])){
 								throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);								
@@ -1925,7 +1917,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.6.0';
+	$version = '0.6.1';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
