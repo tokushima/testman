@@ -446,7 +446,7 @@ namespace testman{
 				\testman\Std::println_primary('Written Result:   '.self::output(\testman\Conf::get('output')).' ');
 			}
 			if(\testman\Coverage::stop()){
-				\testman\Coverage::output();
+				\testman\Coverage::output(true);
 			}
 			\testman\Std::println();
 			
@@ -743,7 +743,7 @@ namespace testman{
 							$filename = $target_list[$cov[0]];
 			
 							if(!isset(self::$result[$filename])){
-								self::$result[$filename] = array('covered_line_status'=>array(),'uncovered_line_status'=>array(),'exec'=>1);
+								self::$result[$filename] = array('covered_line_status'=>array(),'uncovered_line_status'=>array(),'test'=>1);
 							}
 							foreach($cov[1] as $line => $status){
 								if($status == 1){
@@ -763,7 +763,7 @@ namespace testman{
 				}
 				foreach($target_list as $filename){
 					if(!isset(self::$result[$filename])){
-						self::$result[$filename] = array('covered_line'=>array(),'uncovered_line'=>array(),'exec'=>0);
+						self::$result[$filename] = array('covered_line'=>array(),'uncovered_line'=>array(),'test'=>0);
 					}
 				}
 				ksort(self::$result);
@@ -785,28 +785,34 @@ namespace testman{
 		/**
 		 * startで指定した$work_dirに結果のXMLを出力する
 		 */
-		public static function output(){
+		public static function output($written_xml){
 			\testman\Std::println();
 			\testman\Std::println_warning('Coverage: ');
 			
-			$xml = new \SimpleXMLElement('<coverage></coverage>');
+			if($written_xml){
+				$xml = new \SimpleXMLElement('<coverage></coverage>');
+			}
 
 			$total_covered = $total_lines = 0;
 			foreach(self::get() as $filename => $resultset){
 				$covered = count($resultset['covered_line']);
 				$uncovered = count($resultset['uncovered_line']);
-				$total_covered += $covered;
-				$total_lines += $covered + $uncovered;
-				$covered = (($resultset['exec'] == 1) ? ceil($covered / ($covered + $uncovered) * 100) : 0);
-					
-				$f = $xml->addChild('file');
-				$f->addAttribute('name',$filename);
-				$f->addAttribute('covered',$covered);
-				$f->addAttribute('modify_date',date('Y/m/d H:i:s',filemtime($filename)));
-				$f->addChild('covered_lines',implode(',',$resultset['covered_line']));
-				$f->addChild('uncovered_lines',implode(',',$resultset['uncovered_line']));
+				$covered = (($resultset['test'] == 1) ? ceil($covered / ($covered + $uncovered) * 100) : 0);
 				
-				$msg = sprintf(' %3d%% %s',$covered,$filename);				
+				$total_lines += $covered + $uncovered;
+				$total_covered += $covered;
+				
+				if(isset($xml)){
+					$f = $xml->addChild('file');
+					$f->addAttribute('name',str_replace(getcwd().DIRECTORY_SEPARATOR,'',$filename));
+					$f->addAttribute('covered',$covered);
+					$f->addAttribute('modify_date',date('Y/m/d H:i:s',filemtime($filename)));
+					$f->addChild('covered_lines',implode(',',$resultset['covered_line']));
+					$f->addChild('uncovered_lines',implode(',',$resultset['uncovered_line']));
+					$f->addAttribute('test',($resultset['test'] == 1) ? 'true' : 'false');
+				}
+				
+				$msg = sprintf(' %3d%% %s',$covered,$filename);
 				if($covered == 100){
 					\testman\Std::println_success($msg);
 				}else if($covered > 50){
@@ -816,17 +822,97 @@ namespace testman{
 				}
 			}
 			$covered_sum = ($total_covered == 0) ? 0 : ceil($total_covered/$total_lines*100);
-			
-			$xml->addAttribute('create_date',date('Y/m/d H:i:s'));
-			$xml->addAttribute('covered',$covered_sum);
-			$xml->addAttribute('lines',$total_lines);
-			$xml->addAttribute('covered_lines',$total_covered);
-			file_put_contents(self::$db,$xml->asXML());
-			
+						
 			\testman\Std::println(str_repeat('-',70));
 			\testman\Std::println_info(sprintf(' Covered %s%%',$covered_sum));
-			\testman\Std::println_primary(PHP_EOL.'Written Coverage: '.realpath(self::$db));
+			
+			if(isset($xml)){
+				$xml->addAttribute('create_date',date('Y/m/d H:i:s'));
+				$xml->addAttribute('covered',$covered_sum);
+				$xml->addAttribute('lines',$total_lines);
+				$xml->addAttribute('covered_lines',$total_covered);
+
+				$save_path = realpath(self::$db);
+				if(!is_dir(dirname($save_path))){
+					mkdir(dirname($save_path),0777,true);
+				}				
+				$dom = new \DOMDocument('1.0','utf-8');
+				$node = $dom->importNode(dom_import_simplexml($xml), true);
+				$dom->appendChild($node);
+				$dom->preserveWhiteSpace = false;
+				$dom->formatOutput = true;
+				$dom->save($save_path);
+				
+				\testman\Std::println_primary(PHP_EOL.'Written Coverage: '.$save_path);
+			}
 		}
+		
+		public static function load($xml_file){
+			$xml = \testman\Xml::extract(file_get_contents($xml_file),'coverage');
+			$create_date = strtotime($xml->in_attr('create_date'));
+			
+			self::$result = array();
+			foreach($xml->find('file') as $file){
+				self::$result[$file->in_attr('name')] = array(
+					'covered_line'=>explode(',',$file->find_get('covered_lines')->value()),
+					'uncovered_line'=>explode(',',$file->find_get('uncovered_lines')->value()),
+					'test'=>(($file->in_attr('test') == 'true') ? 1 : 0),
+				);
+			}
+			return $create_date;
+		}
+		
+		public static function output_source($source_file,$coverage_date){
+			if(!is_file($source_file)){
+				throw new \testman\NotFoundException('ない');
+			}
+			$source_file = realpath($source_file);
+			$path = str_replace(getcwd().DIRECTORY_SEPARATOR,'',$source_file);
+			
+			if(!isset(self::$result[$path])){
+				throw new \testman\NotFoundException('かアレッジない');
+			}
+			if(filemtime($source_file) > strtotime($coverage_date)){
+				throw new \testman\NotFoundException('更新されちゃってる');
+			}
+			$source_list = explode(PHP_EOL,file_get_contents($source_file));
+			
+			$covered = count(self::$result[$path]['covered_line']);
+			$uncovered = count(self::$result[$path]['uncovered_line']);
+			$covered = ((self::$result[$path]['test'] == 1) ? ceil($covered / ($covered + $uncovered) * 100) : 0);
+			
+			\testman\Std::println();
+			\testman\Std::println_warning('Coverage: ');
+			
+			
+			$msg = sprintf('  %d%% %s',$covered,$path);			
+			if($covered == 100){
+				\testman\Std::println_success($msg);
+			}else if($covered > 50){
+				\testman\Std::println_warning($msg);
+			}else{
+				\testman\Std::println_danger($msg);
+			}
+			
+			\testman\Std::println();
+			
+			$tab = strlen(sizeof($source_list));
+			foreach($source_list as $no => $line){
+				$i = $no + 1;
+				$msg = sprintf('  %'.$tab.'s %s',$i,$line);
+				
+				if(self::$result[$path]['test'] !== 1){
+					\testman\Std::println($msg);
+				}else if(in_array($i,self::$result[$path]['covered_line'])){
+					\testman\Std::println_success($msg);
+				}else if(in_array($i,self::$result[$path]['uncovered_line'])){
+					\testman\Std::println_danger($msg);
+				}else{
+					\testman\Std::println_white($msg);
+				}
+			}
+			\testman\Std::println();
+		}		
 	}
 	/**
 	 * XMLを処理する
@@ -1033,6 +1119,21 @@ namespace testman{
 			return new \testman\XmlIterator($name,$this->value(),$offset,$length);
 		}
 		/**
+		 * 対象の件数
+		 * @param string $name
+		 * @param integer $offset
+		 * @param integer $length
+		 * @return number
+		 */
+		public function find_count($name,$offset=0,$length=0){
+			$cnt = 0;
+			
+			foreach($this->find($name,$offset,$length) as $x){
+				$cnt++;
+			}
+			return $cnt;
+		}
+		/**
 		 * １件取得する
 		 * @param string $name
 		 * @param integer $offset
@@ -1089,7 +1190,9 @@ namespace testman{
 				$name = str_replace(array("\r\n","\r","\n"),'',(empty($m[1]) ? $m[2] : $m[1]));
 			}
 			$qname = preg_quote($name,'/');
-			if(!preg_match("/<(".$qname.")([\s][^>]*?)>|<(".$qname.")>/is",$plain,$parse,PREG_OFFSET_CAPTURE)) return false;
+			if(!preg_match("/<(".$qname.")([\s][^>]*?)>|<(".$qname.")>|<(".$qname.")\/>/is",$plain,$parse,PREG_OFFSET_CAPTURE)){
+				return false;
+			}
 			$x = new self();
 			$x->pos = $parse[0][1];
 			$balance = 0;
@@ -1220,6 +1323,7 @@ namespace testman{
 		 */
 		public function redirect_max($redirect_max){
 			$this->redirect_max = (integer)$redirect_max;
+			return $this;
 		}
 		/**
 		 * タイムアウトするまでの秒数
@@ -1227,6 +1331,7 @@ namespace testman{
 		 */
 		public function timeout($timeout){
 			$this->timeout = (int)$timeout;
+			return $this;
 		}
 		/**
 		 * リクエスト時のユーザエージェント
@@ -1234,6 +1339,7 @@ namespace testman{
 		 */
 		public function agent($agent){
 			$this->agent = $agent;
+			return $this;
 		}
 		public function __toString(){
 			return $this->body();
@@ -1245,6 +1351,7 @@ namespace testman{
 		 */
 		public function header($key,$value=null){
 			$this->request_header[$key] = $value;
+			return $this;
 		}
 		/**
 		 * リクエスト時のクエリ
@@ -1254,7 +1361,10 @@ namespace testman{
 		public function vars($key,$value=null){
 			if(is_bool($value)) $value = ($value) ? 'true' : 'false';
 			$this->request_vars[$key] = $value;
-			if(isset($this->request_file_vars[$key])) unset($this->request_file_vars[$key]);
+			if(isset($this->request_file_vars[$key])){
+				unset($this->request_file_vars[$key]);
+			}
+			return $this;
 		}
 		/**
 		 * リクエスト時の添付ファイル
@@ -1263,7 +1373,10 @@ namespace testman{
 		 */
 		public function file_vars($key,$filepath){
 			$this->request_file_vars[$key] = $filepath;
-			if(isset($this->request_vars[$key])) unset($this->request_vars[$key]);
+			if(isset($this->request_vars[$key])){
+				unset($this->request_vars[$key]);
+			}
+			return $this;
 		}
 		/**
 		 * リクエストクエリがセットされているか
@@ -1281,6 +1394,7 @@ namespace testman{
 		public function setopt($key,$value){
 			if(!isset($this->resource)) $this->resource = curl_init();
 			curl_setopt($this->resource,$key,$value);
+			return $this;
 		}
 		/**
 		 * 結果ヘッダの取得
@@ -1917,22 +2031,39 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.6.1';
+	$version = '0.6.3';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
 		\testman\Std::println_info('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
 		\testman\Std::println();
 		\testman\Std::println_primary('Options:');
-		\testman\Std::println('  --coverage <file> Generate code coverage report in XML format.');
+		\testman\Std::println('  --coverage <coverage file> Generate code coverage report in XML format');
+		\testman\Std::println('  --coverd <coverage file> View coverage report');
 		\testman\Std::println('  --output <file>   Log test execution in XML format to file');
 		\testman\Std::println('  --list [keyword]  List test files');
 		\testman\Std::println('  --info            Info setup[s]');
+		\testman\Std::println('  --setup           View setup[s] script');		
 		\testman\Std::println();
 	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
 		\testman\Finder::summary_list($testdir,$keyword);
 	}else if((\testman\Args::opt('info',false)) !== false){
-		\testman\Finder::setup_info($testdir,\testman\Args::opt('source',false));
+		\testman\Finder::setup_info($testdir,false);
+	}else if((\testman\Args::opt('setup',false)) !== false){
+		\testman\Finder::setup_info($testdir,true);
+	}else if(($covered_file = \testman\Args::opt('covered',false)) !== false){
+		try{
+			$create_date = \testman\Coverage::load($covered_file);
+			$source = \testman\Args::opt('source');
+
+			if(is_file($source)){
+				\testman\Coverage::output_source($source,$create_date);
+			}else{
+				\testman\Coverage::output(false);
+			}
+		}catch(\Exception $e){
+			\testman\Std::println_danger($e->getMessage());
+		}
 	}else{
 		\testman\Runner::start($testdir);
 	}
