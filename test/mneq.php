@@ -10,3 +10,5 @@ _SRC;
 mneq('xxx',$src);
 mneq('yyy',$src);
 
+$xml = new \testman\Xml('abc','ABCDEFG');
+mneq('XYZ',$xml);

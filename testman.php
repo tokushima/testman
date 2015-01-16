@@ -1925,6 +1925,9 @@ namespace{
 		 * @param string $msg 失敗時メッセージ
 		 */
 		function eq($expectation,$result,$msg='failure equals'){
+			if(($result instanceof \testman\Xml) && is_string($expectation)){
+				$result = $result->value();
+			}
 			if(\testman\Assert::expvar($expectation) !== \testman\Assert::expvar($result)){
 				$failure = new \testman\AssertFailure($msg);
 				throw $failure->ab($expectation, $result);
@@ -1939,6 +1942,9 @@ namespace{
 		 * @param string $msg 失敗時メッセージ
 		 */
 		function neq($expectation,$result,$msg='failure not equals'){
+			if(($result instanceof \testman\Xml) && is_string($expectation)){
+				$result = $result->value();
+			}
 			if(\testman\Assert::expvar($expectation) === \testman\Assert::expvar($result)){
 				$failure = new \testman\AssertFailure($msg);
 				throw $failure->ab($expectation, $result);
@@ -1949,16 +1955,19 @@ namespace{
 		/**
 		 *　文字列中に指定の文字列が存在する
 		 * @param string|array $keyword
-		 * @param string $src
+		 * @param string $result
 		 * @param string $msg 失敗時メッセージ
 		 */
-		function meq($keyword,$src,$msg='failure match'){
-			if(mb_strpos($src,$keyword) === false){
+		function meq($keyword,$result,$msg='failure match'){
+			if(($result instanceof \testman\Xml)){
+				$result = $result->value();
+			}
+			if(mb_strpos($result,$keyword) === false){
 				$failure = new \testman\AssertFailure($msg);
-				if(strlen($src) > 80){
-					$src = substr($src,0,80).' ...';
+				if(strlen($result) > 80){
+					$result = substr($result,0,80).' ...';
 				}
-				throw $failure->ab($keyword,$src);
+				throw $failure->ab($keyword,$result);
 			}
 		}
 	}
@@ -1968,13 +1977,16 @@ namespace{
 		 * @param string $keyword
 		 * @param string $src
 		 */
-		function mneq($keyword,$src,$msg='failure not match'){
-			if(mb_strpos($src,$keyword) !== false){
+		function mneq($keyword,$result,$msg='failure not match'){
+			if(($result instanceof \testman\Xml)){
+				$result = $result->value();
+			}
+			if(mb_strpos($result,$keyword) !== false){
 				$failure = new \testman\AssertFailure($msg);
-				if(strlen($src) > 80){
-					$src = substr($src,0,80).' ...';
+				if(strlen($result) > 80){
+					$result = substr($result,0,80).' ...';
 				}				
-				throw $failure->ab($keyword,$src);
+				throw $failure->ab($keyword,$result);
 			}
 		}
 	}
@@ -2031,7 +2043,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.6.3';
+	$version = '0.6.4';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){

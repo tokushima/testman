@@ -1,11 +1,18 @@
 <?php
 eq(1,1);
 
-eq(1,1);
+eq(true,true);
 
-eq(1,1);
+eq(false,false);
 
 
-eq(1,1);
+eq('A','A');
 
-eq(1,1);
+$obj1 = (object)array('a'=>1,'b'=>2);
+$obj2 = (object)array('a'=>1,'b'=>2);
+eq($obj1,$obj2);
+
+$xml = new \testman\Xml('abc','ABCDEFG');
+eq('ABCDEFG',$xml);
+
+
