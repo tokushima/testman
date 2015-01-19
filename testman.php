@@ -1925,7 +1925,7 @@ namespace{
 		 * @param string $msg 失敗時メッセージ
 		 */
 		function eq($expectation,$result,$msg='failure equals'){
-			if(($result instanceof \testman\Xml) && is_string($expectation)){
+			if(($result instanceof \testman\Xml) && !($expectation instanceof \testman\Xml)){
 				$result = $result->value();
 			}
 			if(\testman\Assert::expvar($expectation) !== \testman\Assert::expvar($result)){
@@ -1942,7 +1942,7 @@ namespace{
 		 * @param string $msg 失敗時メッセージ
 		 */
 		function neq($expectation,$result,$msg='failure not equals'){
-			if(($result instanceof \testman\Xml) && is_string($expectation)){
+			if(($result instanceof \testman\Xml) && !($expectation instanceof \testman\Xml)){
 				$result = $result->value();
 			}
 			if(\testman\Assert::expvar($expectation) === \testman\Assert::expvar($result)){
