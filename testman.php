@@ -330,9 +330,12 @@ namespace testman{
 				if('neutral' == mb_language()) mb_language('Japanese');
 				mb_internal_encoding('UTF-8');
 			}
+			
 			if(function_exists('opcache_reset')){
 				opcache_reset();
-			}			
+			}
+			clearstatcache(true);
+			
 			set_error_handler(function($n,$s,$f,$l){
 				throw new \ErrorException($s,0,$n,$f,$l);
 			});
@@ -353,28 +356,30 @@ namespace testman{
 					return false;
 				},true,false);
 			}
+			
 			if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
+				$msg = 'Setting '.$f;
+				\testman\Std::p($msg,'37');				
 				include_once($f);
+				\testman\Std::backspace(strlen($msg));
 			}
 			$testdir = realpath($testdir);
 			$success = $fail = $exception = $exe_time = $use_memory = 0;
-		
-			\testman\Std::println_warning('Progress:');
+			
+			$msg = 'Finding '.$testdir;
+			\testman\Std::p($msg,'37');
 			$test_list = \testman\Finder::get_list($testdir);
-		
-			$fixture = function(){
-				if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
-					include_once($f);
-					return true;
-				}
-				return false;
-			};
-		
-			\testman\Std::p(' ');
-			\testman\Std::p(str_repeat('+',sizeof($test_list)));
-			\testman\Std::p("\033[".(sizeof($test_list)+2)."D");
-			\testman\Std::p($fixture() ? "\033[32m@\033[0m" : '@');
-			\testman\Std::p(' ');
+			\testman\Std::backspace(strlen($msg));
+
+			\testman\Std::println_warning('Progress:');	
+			\testman\Std::p('@ '.str_repeat('+',sizeof($test_list)));			
+			\testman\Std::left(sizeof($test_list)+2);
+			
+
+			if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
+				include_once($f);
+			}
+			\testman\Std::p('@ ',32);
 		
 			$start_time = microtime(true);
 			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
@@ -382,9 +387,14 @@ namespace testman{
 			\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
 			
 			foreach($test_list as $test_path){
-				\testman\Std::p("/\033[1D");
+				\testman\Std::p('/');
+				\testman\Std::left(1);
 				$status = \testman\Runner::exec($test_path);
-				\testman\Std::p("\033[".(($status == 1) ? 32 : 31)."m*\033[0m");
+				if($status == 1){
+					\testman\Std::p('*',32);
+				}else{
+					\testman\Std::p('*',31);
+				}
 			}
 			\testman\Std::p(PHP_EOL);
 		
@@ -1803,14 +1813,24 @@ namespace testman{
 		 */
 		public static function p($msg,$color='0'){
 			if(self::$stdout){
-				if(substr(PHP_OS,0,3) != 'WIN'){
-					print("\033[".$color."m");
-					print($msg);
-					print("\033[0m");
-				}else{
-					print($msg);
-				}
+				print("\033[".$color."m".$msg."\033[0m");
 			}
+		}
+		/**
+		 * カーソルを左に移動
+		 * @param integer $num
+		 */
+		public static function left($num){
+			print("\033[".$num."D");
+		}
+		/**
+		 * BS
+		 * @param integer $num
+		 */
+		public static function backspace($num){
+			self::left($num);
+			print(str_repeat(' ',$num));
+			self::left($num);
 		}
 		/**
 		 * 改行つきで色付きでプリント
@@ -2043,7 +2063,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.6.4';
+	$version = '0.6.5';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
@@ -2077,6 +2097,10 @@ namespace{
 			\testman\Std::println_danger($e->getMessage());
 		}
 	}else{
-		\testman\Runner::start($testdir);
+		try{
+			\testman\Runner::start($testdir);
+		}catch(\Exception $e){
+			\testman\Std::println_danger(PHP_EOL.$e->getMessage().PHP_EOL.PHP_EOL.$e->getTraceAsString());
+		}
 	}
 }
