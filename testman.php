@@ -2100,7 +2100,7 @@ namespace{
 		try{
 			\testman\Runner::start($testdir);
 		}catch(\Exception $e){
-			\testman\Std::println_danger(PHP_EOL.$e->getMessage().PHP_EOL.PHP_EOL.$e->getTraceAsString());
+			\testman\Std::println_danger(PHP_EOL.get_class($e).': '.$e->getMessage().PHP_EOL.PHP_EOL.$e->getTraceAsString());
 		}
 	}
 }
