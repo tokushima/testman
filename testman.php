@@ -1710,7 +1710,11 @@ namespace testman{
 		 * @return \testman\Xml
 		 */
 		public function xml($name=null){
-			return \testman\Xml::extract($this->body(),$name);
+			try{
+				return \testman\Xml::extract($this->body(),$name);
+			}catch(\testman\NotFoundException $e){
+				throw new \testman\NotFoundException($e->getMessage().': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
+			}
 		}
 		/**
 		 * bodyを解析し配列として返す
@@ -1721,14 +1725,14 @@ namespace testman{
 			$array = json_decode($this->body(),true);
 			
 			if($array === false){
-				throw new \testman\NotFoundException('Invalid data');
+				throw new \testman\NotFoundException('Invalid data: '.': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
 			}
 			$names = explode($delimiter,$name);
 			foreach($names as $key){
 				if(array_key_exists($key,$array)){
 					$array = $array[$key];
 				}else{
-					throw new \testman\NotFoundException($name.' not found');
+					throw new \testman\NotFoundException($name.' not found: '.': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
 				}
 			}
 			return $array;
