@@ -361,7 +361,7 @@ namespace testman{
 				$msg = 'Setting '.$f;
 				\testman\Std::p($msg,'37');				
 				include_once($f);
-				\testman\Std::backspace(strlen($msg));
+				\testman\Std::bs(strlen($msg));
 			}
 			$testdir = realpath($testdir);
 			$success = $fail = $exception = $exe_time = $use_memory = 0;
@@ -369,32 +369,49 @@ namespace testman{
 			$msg = 'Finding '.$testdir;
 			\testman\Std::p($msg,'37');
 			$test_list = \testman\Finder::get_list($testdir);
-			\testman\Std::backspace(strlen($msg));
+			\testman\Std::bs(strlen($msg));
 
 			\testman\Std::println_warning('Progress:');	
-			\testman\Std::p('@ '.str_repeat('+',sizeof($test_list)));			
-			\testman\Std::left(sizeof($test_list)+2);
+			\testman\Std::p('@ '.str_repeat('+',sizeof($test_list)),37);
+			\testman\Std::println();
+			\testman\Std::cur(-1,(sizeof($test_list)+2)*-1);
 			
-
 			if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
 				include_once($f);
 			}
-			\testman\Std::p('@ ',32);
-		
+			\testman\Std::p(' @ ',32);
+
 			$start_time = microtime(true);
 			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
 			
 			\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
 			
+			for($i=0;$i<5;$i++){
+				\testman\Std::println();
+			}
+			\testman\Std::cur(-5,3);
+			
+			$i = 0;
 			foreach($test_list as $test_path){
-				\testman\Std::p('/');
-				\testman\Std::left(1);
+				$now = 'Running.. '.$test_path.' ';
+				
+				\testman\Std::p('/',37);
+				\testman\Std::cur(0,-1);
+				
+				\testman\Std::cur(1,$i*-1);
+				\testman\Std::p($now,37);
+				
 				$status = \testman\Runner::exec($test_path);
+
+ 				\testman\Std::bs(strlen($now));
+ 				\testman\Std::cur(-1,$i);
+				
 				if($status == 1){
 					\testman\Std::p('*',32);
 				}else{
 					\testman\Std::p('*',31);
 				}
+				$i++;
 			}
 			\testman\Std::p(PHP_EOL);
 		
@@ -615,7 +632,6 @@ namespace testman{
 				ob_start();
 					self::exec_setup_teardown($test_file,true);
 					$test_exec_start_time = microtime(true);
-
 				
 					foreach(self::$vars as $k => $v){
 						$$k = $v;
@@ -1821,20 +1837,38 @@ namespace testman{
 			}
 		}
 		/**
-		 * カーソルを左に移動
+		 * カーソルを移動
 		 * @param integer $num
 		 */
-		public static function left($num){
-			print("\033[".$num."D");
+		public static function cur($up_down,$left_right){
+			if(!empty($up_down)){
+				if($up_down < 0){
+					print("\033[".($up_down*-1)."A");
+				}else{
+					print("\033[".$up_down."B");	
+				}
+			}
+			if(!empty($left_right)){
+				if($left_right < 0){
+					print("\033[".($left_right*-1)."D");
+				}else{
+					print("\033[".$left_right."C");
+				}
+			}
 		}
+
 		/**
-		 * BS
+		 * BackSpace
 		 * @param integer $num
 		 */
-		public static function backspace($num){
-			self::left($num);
-			print(str_repeat(' ',$num));
-			self::left($num);
+		public static function bs($num=0){
+			if(empty($num)){
+				print("\033[2K");
+			}else{
+				self::cur(0,$num*-1);
+				print(str_repeat(' ',$num));
+				self::cur(0,$num*-1);
+			}
 		}
 		/**
 		 * 改行つきで色付きでプリント
