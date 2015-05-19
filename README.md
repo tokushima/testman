@@ -5,11 +5,12 @@
 ![my image](resources/image/testman.png)
 
 #Download
-	$ curl -LO http://git.io/testman.phar
+	$ mkdir test
+	$ curl -Lo test/testman.phar http://git.io/testman.phar
 
 #Quick test
 
-	$ php testman.phar <path>
+	$ php test/testman.phar <path>
 
 #Options
 \--coverage <file>
@@ -27,6 +28,14 @@
 \--info
 
 	Info setup[s].
+	
+\--setup
+	View setup[s] script
+
+\--init
+	Create init files
+
+
 
 #Config script file
 

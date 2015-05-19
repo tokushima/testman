@@ -37,18 +37,31 @@ namespace testman{
 			return array_key_exists($name,self::$conf);
 		}
 		/**
+		 * 設定ファイルのパス
+		 * @param string $name
+		 * @throws \InvalidArgumentException
+		 * @return string
+		 */
+		public static function settings_path($name){
+			$dir = dirname(__FILE__);
+			if(strpos($dir,'phar://') === 0){
+				$dir = str_replace('phar://','',dirname($dir));
+			}
+			if(!is_dir($dir)){
+				throw new \InvalidArgumentException('Not found '.$dir);
+			}
+			return $dir.'/testman.'.$name;
+		}
+		/**
 		 * 設定ファイル/ディレクトリが存在するか
 		 * @param string $name
 		 * @return Ambigous <NULL, string>|NULL
 		 */				
 		public static function has_settings($name){
-			$dir = dirname(__FILE__);
-			if(strpos($dir,'phar://') === 0){
-				$dir = str_replace('phar://','',dirname($dir));
-			}
-			if(is_dir($dir)){
-				$path = $dir.'/testman.'.$name;
+			try{
+				$path = self::settings_path($name);
 				return (is_file($path) || is_dir($path) ? $path : null);
+			}catch(\InvalidArgumentException $e){
 			}
 			return null;
 		}
@@ -2101,7 +2114,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.6.5';
+	$version = '0.6.6';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	
 	if(\testman\Args::opt('help')){
@@ -2113,10 +2126,14 @@ namespace{
 		\testman\Std::println('  --output <file>   Log test execution in XML format to file');
 		\testman\Std::println('  --list [keyword]  List test files');
 		\testman\Std::println('  --info            Info setup[s]');
-		\testman\Std::println('  --setup           View setup[s] script');		
+		\testman\Std::println('  --setup           View setup[s] script');
+		\testman\Std::println('  --init            Create init files');
 		\testman\Std::println();
 	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
 		\testman\Finder::summary_list($testdir,$keyword);
+	}else if((\testman\Args::opt('init',false)) !== false){
+		// TODO
+		file_put_contents(\testman\Conf::settings_path('settings.php'), '<?php'.PHP_EOL);
 	}else if((\testman\Args::opt('info',false)) !== false){
 		\testman\Finder::setup_info($testdir,false);
 	}else if((\testman\Args::opt('setup',false)) !== false){
