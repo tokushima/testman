@@ -30,9 +30,11 @@
 	Info setup[s].
 	
 \--setup
+
 	View setup[s] script
 
 \--init
+
 	Create init files
 
 

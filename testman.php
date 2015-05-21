@@ -50,7 +50,7 @@ namespace testman{
 			if(!is_dir($dir)){
 				throw new \InvalidArgumentException('Not found '.$dir);
 			}
-			return $dir.'/testman.'.$name;
+			return $dir.'/'.$name;
 		}
 		/**
 		 * 設定ファイル/ディレクトリが存在するか
@@ -59,7 +59,7 @@ namespace testman{
 		 */				
 		public static function has_settings($name){
 			try{
-				$path = self::settings_path($name);
+				$path = self::settings_path('testman.'.$name);
 				return (is_file($path) || is_dir($path) ? $path : null);
 			}catch(\InvalidArgumentException $e){
 			}
@@ -2132,8 +2132,49 @@ namespace{
 	}else if(($keyword = \testman\Args::opt('list',false)) !== false){
 		\testman\Finder::summary_list($testdir,$keyword);
 	}else if((\testman\Args::opt('init',false)) !== false){
-		// TODO
-		file_put_contents(\testman\Conf::settings_path('settings.php'), '<?php'.PHP_EOL);
+		$newfile = function($file,$source){
+			$fp = \testman\Conf::settings_path($file);
+			
+			if(!is_file($fp)){
+				file_put_contents($fp,'<?php'.PHP_EOL.$source);
+				\testman\Std::println_info('Written '.$fp);
+			}
+		};
+		$newfile('testman.settings.php', <<< '_SRC_'
+// テスト用の設定をします
+// \testman\Conf::set('urls',\ebi\Dt::get_urls());
+// \testman\Conf::set('output',dirname(__DIR__).'/work/result.xml');
+// \testman\Conf::set('ssl-verify',false);
+_SRC_
+		);
+		$newfile('testman.fixture.php',<<< '_SRC_'
+// テスト用の初期データを作成します
+// \ebi\Dt::setup();
+_SRC_
+		);
+		$newfile('__setup__.php',<<< '_SRC_'
+// テスト毎の開始処理
+// \ebi\Exceptions::clear();
+_SRC_
+		);
+		$newfile('__teardown__.php',<<< '_SRC_'
+// テスト毎の終了処理
+
+_SRC_
+		);
+		
+		if(!is_dir($dir=\testman\Conf::settings_path('testman.lib'))){
+			mkdir($dir,0755,true);
+			\testman\Std::println_info('Create '.$dir);
+			
+			$newfile('testman.lib/Util.php',<<< '_SRC_'
+namespace test; // namespaceはtestから始まる
+
+class Util{
+}
+_SRC_
+			);			
+		}
 	}else if((\testman\Args::opt('info',false)) !== false){
 		\testman\Finder::setup_info($testdir,false);
 	}else if((\testman\Args::opt('setup',false)) !== false){
