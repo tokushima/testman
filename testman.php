@@ -194,8 +194,8 @@ namespace testman{
 		 * @param string $testdir
 		 * @param boolean $source
 		 */
-		public static function setup_info($testdir,$source=false){
-			list($var_types,$inc_list,$target_dir) = self::setup_teardown_files($testdir, true);
+		public static function setup_info($dir,$source=false){
+			list($var_types,$inc_list,$target_dir) = self::setup_teardown_files($dir, true);
 			
 			$summary_list = array();
 			foreach($inc_list as $inc){
@@ -2175,10 +2175,10 @@ class Util{
 _SRC_
 			);			
 		}
-	}else if((\testman\Args::opt('info',false)) !== false){
-		\testman\Finder::setup_info($testdir,false);
-	}else if((\testman\Args::opt('setup',false)) !== false){
-		\testman\Finder::setup_info($testdir,true);
+	}else if(($p=\testman\Args::opt('info',false)) !== false){
+		\testman\Finder::setup_info($p,false);
+	}else if(($p=\testman\Args::opt('setup',false)) !== false){
+		\testman\Finder::setup_info($p,true);
 	}else if(($covered_file = \testman\Args::opt('covered',false)) !== false){
 		try{
 			$create_date = \testman\Coverage::load($covered_file);
