@@ -327,6 +327,14 @@ namespace testman{
 				throw new \InvalidArgumentException($testdir.' not found');
 			}
 			self::$start = true;
+
+			if(substr(PHP_OS,0,3) != 'WIN'){
+				`stty -echo`;
+			}
+			for($i=0;$i<5;$i++){
+				\testman\Std::println();
+			}
+			\testman\Std::cur(-5,0);
 			
 			ini_set('display_errors','On');
 			ini_set('html_errors','Off');
@@ -399,32 +407,57 @@ namespace testman{
 			
 			\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
 			
-			for($i=0;$i<5;$i++){
-				\testman\Std::println();
-			}
-			\testman\Std::cur(-5,3);
-			
+			$errline = 0;
 			$i = 0;
+			
 			foreach($test_list as $test_path){
 				$now = 'Running.. '.$test_path.' ';
 				
-				\testman\Std::p('/',37);
+				\testman\Std::p('t',33);
 				\testman\Std::cur(0,-1);
 				
 				\testman\Std::cur(1,$i*-1);
 				\testman\Std::p($now,37);
 				
-				$status = \testman\Runner::exec($test_path);
+				list($test_name,$res) = \testman\Runner::exec($test_path);
 
  				\testman\Std::bs(strlen($now));
  				\testman\Std::cur(-1,$i);
 				
-				if($status == 1){
+				if($res[0] == 1){
 					\testman\Std::p('*',32);
 				}else{
 					\testman\Std::p('*',31);
+					
+					if($errline == 0){
+						$errline = 2;
+						
+						\testman\Std::cur($errline + 1,($i+1)*-1);
+							\testman\Std::p('Failure:',31);
+							\testman\Std::cur(0,strlen('Failure:') * -1);
+						\testman\Std::cur(($errline + 1) * -1,$i+1);
+					}
+					$errline++;
+
+					$errnm = $test_name.':'.$res[3];
+ 					\testman\Std::cur($errline + 1,(($i+1)*-1)+1);
+	 					\testman\Std::p($errnm,31);
+	 					\testman\Std::cur(0,strlen($errnm) * -1);
+
+						for($l=0;$l<5;$l++){
+							\testman\Std::println();
+						}
+						\testman\Std::cur(-5,4);
+ 					\testman\Std::cur(($errline + 1) * -1,($i+1-1));
 				}
 				$i++;
+			}
+			if($errline > 0){
+				for($a=0;$a<=$errline;$a++){
+					\testman\Std::cur(1,0);
+					\testman\Std::line_clear();
+				}
+				\testman\Std::cur($errline*-1,0);
 			}
 			\testman\Std::p(PHP_EOL);
 		
@@ -490,6 +523,9 @@ namespace testman{
 			}
 			\testman\Std::println();
 			
+			if(substr(PHP_OS,0,3) != 'WIN'){
+				`stty echo`;
+			}
 			return self::$resultset;
 		}
 		
@@ -678,9 +714,10 @@ namespace testman{
 				}
 				ob_end_clean();
 			}
+			$test_name = str_replace(getcwd().DIRECTORY_SEPARATOR,'',$test_file);
 			self::exec_setup_teardown($test_file,false);
-			self::$resultset[str_replace(getcwd().DIRECTORY_SEPARATOR,'',$test_file)] = $res;
-			return $res[0];
+			self::$resultset[$test_name] = $res;
+			return array($test_name,$res);
 		}
 	}
 	class Coverage{
@@ -1869,7 +1906,12 @@ namespace testman{
 				}
 			}
 		}
-
+		/**
+		 * １行削除
+		 */
+		public static function line_clear(){
+			print("\033[2K");
+		}
 		/**
 		 * BackSpace
 		 * @param integer $num
@@ -2114,8 +2156,9 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.6.6';
+	$version = '0.6.7';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
+	\testman\Std::println();
 	
 	if(\testman\Args::opt('help')){
 		\testman\Std::println_info('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
