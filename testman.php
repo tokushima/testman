@@ -315,6 +315,12 @@ namespace testman{
 			return self::$current_test;
 		}
 
+		private static function trim_msg($msg,$len){
+			if(strlen($msg) > $len){
+				return mb_substr($msg,0,ceil($len/2)).' .. '.mb_substr($msg,ceil($len/2)*-1);
+			}
+			return $msg;
+		}
 		/**
 		 * 対象のテスト群を実行する
 		 * @param string $testdir
@@ -381,7 +387,7 @@ namespace testman{
 				
 				if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
 					$msg = 'Setting '.$f;
-					\testman\Std::p($msg,'37');				
+					\testman\Std::p($msg,'36');				
 					include_once($f);
 					\testman\Std::bs(strlen($msg));
 				}
@@ -389,69 +395,47 @@ namespace testman{
 				$success = $fail = $exception = $exe_time = $use_memory = 0;
 				
 				$msg = 'Finding '.$testdir;
-				\testman\Std::p($msg,'37');
+				\testman\Std::p($msg,'36');
 				$test_list = \testman\Finder::get_list($testdir);
 				\testman\Std::bs(strlen($msg));
-	
-				\testman\Std::println_warning('Progress:');	
-				\testman\Std::p('@ '.str_repeat('+',sizeof($test_list)),37);
-				\testman\Std::println();
-				\testman\Std::cur(-1,(sizeof($test_list)+2)*-1);
 				
 				if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
-					include_once($f);
+					$msg = 'Init: '.$f;
+					\testman\Std::p($msg,'36');					
+						include_once($f);
+					\testman\Std::bs(strlen($msg));
 				}
-				\testman\Std::p(' @ ',32);
-	
-				$start_time = microtime(true);
-				$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
 				
+				$start_time = microtime(true);
+				$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);				
 				\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
 				
-				$ey = 0;
-				$x = 0;
-				
+				$ey = $cnt = 0;				
+				$testcnt = sizeof($test_list);
 				foreach($test_list as $test_path){
-					$now = 'Running.. '.\testman\Runner::short_name($test_path).' ';
+					$cnt++;
+
+					$msg = 'Running.. ('.($cnt.'/'.$testcnt).') '.self::trim_msg(\testman\Runner::short_name($test_path),80).' ';
+					\testman\Std::p($msg,33);
+						list($test_name,$res) = \testman\Runner::exec($test_path);
+					\testman\Std::bs(strlen($msg));
 					
-					\testman\Std::p('*',33);
-					\testman\Std::cur(0,-1);
-					
-					\testman\Std::cur(1,$x*-1);
-					\testman\Std::p($now,37);
-					
-					list($test_name,$res) = \testman\Runner::exec($test_path);
-	
-	 				\testman\Std::bs(strlen($now));
-	 				\testman\Std::cur(-1,$x);
-					
-					if($res[0] == 1){
-						\testman\Std::p('*',32);
-					}else{
-						\testman\Std::p('*',31);
-						
+					if($res[0] != 1){
 						if($ey == 0){
 							$ey = 2;
 							
-							\testman\Std::cur($ey + 1,($x+1)*-1);
-								\testman\Std::p('Failure:',31);
-								\testman\Std::cur(0,strlen('Failure:') * -1);
-							\testman\Std::cur(($ey + 1) * -1,$x+1);
+							$msg = 'Failure:';
+							\testman\Std::cur($ey,0);
+							\testman\Std::p($msg,31);
+							\testman\Std::cur($ey*-1,strlen($msg) * -1);
 						}
 						$ey++;
-	
-						$errnm = $test_name.':'.$res[3];
-	 					\testman\Std::cur($ey + 1,(($x+1)*-1)+1);
-		 					\testman\Std::p($errnm,31);
-		 					\testman\Std::cur(0,strlen($errnm) * -1);
-	
-							for($l=0;$l<5;$l++){
-								\testman\Std::println();
-							}
-							\testman\Std::cur(-5,4);
-	 					\testman\Std::cur(($ey + 1) * -1,($x+1-1));
+						
+						$msg = '  '.self::trim_msg($test_name,80).':'.$res[3];
+						\testman\Std::cur($ey,0);
+						\testman\Std::p($msg.PHP_EOL.PHP_EOL.PHP_EOL,31);
+						\testman\Std::cur(($ey + 3) * -1,strlen($msg) * -1);
 					}
-					$x++;
 				}
 				if($ey > 0){
 					for($a=0;$a<=$ey;$a++){
@@ -460,12 +444,10 @@ namespace testman{
 					}
 					\testman\Std::cur($ey*-1,0);
 				}
-				\testman\Std::p(PHP_EOL);
 			
 				$exe_time = round((microtime(true) - (float)$start_time),4);
 				$use_memory = round(number_format((memory_get_usage() / 1024 / 1024),3),4) - $start_mem;
-			
-				\testman\Std::println();
+				
 				\testman\Std::println_warning('Results:');
 				
 				$tab = '   ';
