@@ -331,197 +331,201 @@ namespace testman{
 			if(substr(PHP_OS,0,3) != 'WIN'){
 				`stty -echo`;
 			}
-			for($i=0;$i<5;$i++){
-				\testman\Std::println();
-			}
-			\testman\Std::cur(-5,0);
-			
-			ini_set('display_errors','On');
-			ini_set('html_errors','Off');
-			ini_set('error_reporting',E_ALL);
-			ini_set('xdebug.var_display_max_children',-1);
-			ini_set('xdebug.var_display_max_data',-1);
-			ini_set('xdebug.var_display_max_depth',-1);
-			ini_set('memory_limit',-1);
-			
-			if(ini_get('date.timezone') == ''){
-				date_default_timezone_set('Asia/Tokyo');
-			}
-			if(extension_loaded('mbstring')){
-				if('neutral' == mb_language()) mb_language('Japanese');
-				mb_internal_encoding('UTF-8');
-			}
-			
-			if(function_exists('opcache_reset')){
-				opcache_reset();
-			}
-			clearstatcache(true);
-			
-			set_error_handler(function($n,$s,$f,$l){
-				throw new \ErrorException($s,0,$n,$f,$l);
-			});
-			
-			if(null !== ($dir = \testman\Conf::has_settings('lib'))){
-				$dir = realpath($dir);
+			try{
+				for($i=0;$i<5;$i++){
+					\testman\Std::println();
+				}
+				\testman\Std::cur(-5,0);
 				
-				spl_autoload_register(function($class) use ($dir){
-					$cp = str_replace('\\','/',(($class[0] == '\\') ? substr($class,1) : $class));
-
-					if(strpos($cp,'test/') === 0 && is_file($f=($dir.'/'.substr($cp,5).'.php'))){
-						require_once($f);
-	
-						if(class_exists($class,false) || interface_exists($class,false) || trait_exists($class,false)){
-							return true;
-						}
-					}
-					return false;
-				},true,false);
-			}
-			
-			if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
-				$msg = 'Setting '.$f;
-				\testman\Std::p($msg,'37');				
-				include_once($f);
-				\testman\Std::bs(strlen($msg));
-			}
-			$testdir = realpath($testdir);
-			$success = $fail = $exception = $exe_time = $use_memory = 0;
-			
-			$msg = 'Finding '.$testdir;
-			\testman\Std::p($msg,'37');
-			$test_list = \testman\Finder::get_list($testdir);
-			\testman\Std::bs(strlen($msg));
-
-			\testman\Std::println_warning('Progress:');	
-			\testman\Std::p('@ '.str_repeat('+',sizeof($test_list)),37);
-			\testman\Std::println();
-			\testman\Std::cur(-1,(sizeof($test_list)+2)*-1);
-			
-			if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
-				include_once($f);
-			}
-			\testman\Std::p(' @ ',32);
-
-			$start_time = microtime(true);
-			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
-			
-			\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
-			
-			$errline = 0;
-			$i = 0;
-			
-			foreach($test_list as $test_path){
-				$now = 'Running.. '.$test_path.' ';
+				ini_set('display_errors','On');
+				ini_set('html_errors','Off');
+				ini_set('error_reporting',E_ALL);
+				ini_set('xdebug.var_display_max_children',-1);
+				ini_set('xdebug.var_display_max_data',-1);
+				ini_set('xdebug.var_display_max_depth',-1);
+				ini_set('memory_limit',-1);
 				
-				\testman\Std::p('t',33);
-				\testman\Std::cur(0,-1);
+				if(ini_get('date.timezone') == ''){
+					date_default_timezone_set('Asia/Tokyo');
+				}
+				if(extension_loaded('mbstring')){
+					if('neutral' == mb_language()) mb_language('Japanese');
+					mb_internal_encoding('UTF-8');
+				}
 				
-				\testman\Std::cur(1,$i*-1);
-				\testman\Std::p($now,37);
+				if(function_exists('opcache_reset')){
+					opcache_reset();
+				}
+				clearstatcache(true);
 				
-				list($test_name,$res) = \testman\Runner::exec($test_path);
-
- 				\testman\Std::bs(strlen($now));
- 				\testman\Std::cur(-1,$i);
+				set_error_handler(function($n,$s,$f,$l){
+					throw new \ErrorException($s,0,$n,$f,$l);
+				});
 				
-				if($res[0] == 1){
-					\testman\Std::p('*',32);
-				}else{
-					\testman\Std::p('*',31);
+				if(null !== ($dir = \testman\Conf::has_settings('lib'))){
+					$dir = realpath($dir);
 					
-					if($errline == 0){
-						$errline = 2;
+					spl_autoload_register(function($class) use ($dir){
+						$cp = str_replace('\\','/',(($class[0] == '\\') ? substr($class,1) : $class));
+	
+						if(strpos($cp,'test/') === 0 && is_file($f=($dir.'/'.substr($cp,5).'.php'))){
+							require_once($f);
+		
+							if(class_exists($class,false) || interface_exists($class,false) || trait_exists($class,false)){
+								return true;
+							}
+						}
+						return false;
+					},true,false);
+				}
+				
+				if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
+					$msg = 'Setting '.$f;
+					\testman\Std::p($msg,'37');				
+					include_once($f);
+					\testman\Std::bs(strlen($msg));
+				}
+				$testdir = realpath($testdir);
+				$success = $fail = $exception = $exe_time = $use_memory = 0;
+				
+				$msg = 'Finding '.$testdir;
+				\testman\Std::p($msg,'37');
+				$test_list = \testman\Finder::get_list($testdir);
+				\testman\Std::bs(strlen($msg));
+	
+				\testman\Std::println_warning('Progress:');	
+				\testman\Std::p('@ '.str_repeat('+',sizeof($test_list)),37);
+				\testman\Std::println();
+				\testman\Std::cur(-1,(sizeof($test_list)+2)*-1);
+				
+				if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
+					include_once($f);
+				}
+				\testman\Std::p(' @ ',32);
+	
+				$start_time = microtime(true);
+				$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
+				
+				\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
+				
+				$ey = 0;
+				$x = 0;
+				
+				foreach($test_list as $test_path){
+					$now = 'Running.. '.\testman\Runner::short_name($test_path).' ';
+					
+					\testman\Std::p('*',33);
+					\testman\Std::cur(0,-1);
+					
+					\testman\Std::cur(1,$x*-1);
+					\testman\Std::p($now,37);
+					
+					list($test_name,$res) = \testman\Runner::exec($test_path);
+	
+	 				\testman\Std::bs(strlen($now));
+	 				\testman\Std::cur(-1,$x);
+					
+					if($res[0] == 1){
+						\testman\Std::p('*',32);
+					}else{
+						\testman\Std::p('*',31);
 						
-						\testman\Std::cur($errline + 1,($i+1)*-1);
-							\testman\Std::p('Failure:',31);
-							\testman\Std::cur(0,strlen('Failure:') * -1);
-						\testman\Std::cur(($errline + 1) * -1,$i+1);
+						if($ey == 0){
+							$ey = 2;
+							
+							\testman\Std::cur($ey + 1,($x+1)*-1);
+								\testman\Std::p('Failure:',31);
+								\testman\Std::cur(0,strlen('Failure:') * -1);
+							\testman\Std::cur(($ey + 1) * -1,$x+1);
+						}
+						$ey++;
+	
+						$errnm = $test_name.':'.$res[3];
+	 					\testman\Std::cur($ey + 1,(($x+1)*-1)+1);
+		 					\testman\Std::p($errnm,31);
+		 					\testman\Std::cur(0,strlen($errnm) * -1);
+	
+							for($l=0;$l<5;$l++){
+								\testman\Std::println();
+							}
+							\testman\Std::cur(-5,4);
+	 					\testman\Std::cur(($ey + 1) * -1,($x+1-1));
 					}
-					$errline++;
-
-					$errnm = $test_name.':'.$res[3];
- 					\testman\Std::cur($errline + 1,(($i+1)*-1)+1);
-	 					\testman\Std::p($errnm,31);
-	 					\testman\Std::cur(0,strlen($errnm) * -1);
-
-						for($l=0;$l<5;$l++){
+					$x++;
+				}
+				if($ey > 0){
+					for($a=0;$a<=$ey;$a++){
+						\testman\Std::cur(1,0);
+						\testman\Std::line_clear();
+					}
+					\testman\Std::cur($ey*-1,0);
+				}
+				\testman\Std::p(PHP_EOL);
+			
+				$exe_time = round((microtime(true) - (float)$start_time),4);
+				$use_memory = round(number_format((memory_get_usage() / 1024 / 1024),3),4) - $start_mem;
+			
+				\testman\Std::println();
+				\testman\Std::println_warning('Results:');
+				
+				$tab = '   ';
+				foreach(self::$resultset as $testfile => $info){
+					switch($info[0]){
+						case 1:
+							$success++;
+							break;
+						case -1:
+							$fail++;
+							list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
+								
 							\testman\Std::println();
-						}
-						\testman\Std::cur(-5,4);
- 					\testman\Std::cur(($errline + 1) * -1,($i+1-1));
-				}
-				$i++;
-			}
-			if($errline > 0){
-				for($a=0;$a<=$errline;$a++){
-					\testman\Std::cur(1,0);
-					\testman\Std::line_clear();
-				}
-				\testman\Std::cur($errline*-1,0);
-			}
-			\testman\Std::p(PHP_EOL);
-		
-			$exe_time = round((microtime(true) - (float)$start_time),4);
-			$use_memory = round(number_format((memory_get_usage() / 1024 / 1024),3),4) - $start_mem;
-		
-			\testman\Std::println();
-			\testman\Std::println_warning('Results:');
+							\testman\Std::println_primary(' '.$testfile);
+							\testman\Std::println_danger('  ['.$line.']: '.$msg);
+								
+							if($has){
+								$expectation = ' expect ';
+								\testman\Std::println_white($tab.str_repeat('-',(73-strlen($expectation))).$expectation.str_repeat('-',3));
+								ob_start();
+									var_dump($r1);
+								$diff1 = ob_get_clean();
+								\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff1));
 			
-			$tab = '   ';
-			foreach(self::$resultset as $testfile => $info){
-				switch($info[0]){
-					case 1:
-						$success++;
-						break;
-					case -1:
-						$fail++;
-						list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
+								$result = ' result ';
+								\testman\Std::println_white($tab.str_repeat('-',(73-strlen($result))).$result.str_repeat('-',3));
+								ob_start();
+									var_dump($r2);
+								$diff2 = ob_get_clean();
+								\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff2));
+							}
+							break;
+						case -2:
+							$exception++;
+							list(,$time,$file,$line,$msg) = $info;
 							
-						\testman\Std::println();
-						\testman\Std::println_primary(' '.$testfile);
-						\testman\Std::println_danger('  ['.$line.']: '.$msg);
+							$msgarr = explode(PHP_EOL,$msg);
+							$summary = array_shift($msgarr);
 							
-						if($has){
-							$expectation = ' expect ';
-							\testman\Std::println_white($tab.str_repeat('-',(73-strlen($expectation))).$expectation.str_repeat('-',3));
-							ob_start();
-								var_dump($r1);
-							$diff1 = ob_get_clean();
-							\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff1));
-		
-							$result = ' result ';
-							\testman\Std::println_white($tab.str_repeat('-',(73-strlen($result))).$result.str_repeat('-',3));
-							ob_start();
-								var_dump($r2);
-							$diff2 = ob_get_clean();
-							\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff2));
-						}
-						break;
-					case -2:
-						$exception++;
-						list(,$time,$file,$line,$msg) = $info;
-						
-						$msgarr = explode(PHP_EOL,$msg);
-						$summary = array_shift($msgarr);
-						
-						\testman\Std::println();
-						\testman\Std::println_primary(' '.$testfile);
-						\testman\Std::println_danger('  ['.$line.']: '.$summary);
-						\testman\Std::println($tab.implode(PHP_EOL.$tab,$msgarr));
-						break;
+							\testman\Std::println();
+							\testman\Std::println_primary(' '.$testfile);
+							\testman\Std::println_danger('  ['.$line.']: '.$summary);
+							\testman\Std::println($tab.implode(PHP_EOL.$tab,$msgarr));
+							break;
+					}
 				}
+				\testman\Std::println(str_repeat('=',80));
+				\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
+				\testman\Std::println();
+				
+				if(\testman\Conf::has('output')){
+					\testman\Std::println_primary('Written Result:   '.self::output(\testman\Conf::get('output')).' ');
+				}
+				if(\testman\Coverage::stop()){
+					\testman\Coverage::output(true);
+				}
+				\testman\Std::println();
+			}catch(\Exception $e){
+				\testman\Std::println_danger(PHP_EOL.PHP_EOL.'Failure:'.PHP_EOL.PHP_EOL.$e->getMessage().PHP_EOL.$e->getTraceAsString());
 			}
-			\testman\Std::println(str_repeat('=',80));
-			\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
-			\testman\Std::println();
-			
-			if(\testman\Conf::has('output')){
-				\testman\Std::println_primary('Written Result:   '.self::output(\testman\Conf::get('output')).' ');
-			}
-			if(\testman\Coverage::stop()){
-				\testman\Coverage::output(true);
-			}
-			\testman\Std::println();
 			
 			if(substr(PHP_OS,0,3) != 'WIN'){
 				`stty echo`;
@@ -673,6 +677,9 @@ namespace testman{
 				self::exec_include($is_setup,$inc,$var_types);
 			}
 		}
+		public static function short_name($test_file){
+			return str_replace(getcwd().DIRECTORY_SEPARATOR,'',$test_file);
+		}
 		private static function exec($test_file){
 			self::$vars = array();
 			self::$current_test = $test_file;
@@ -714,7 +721,7 @@ namespace testman{
 				}
 				ob_end_clean();
 			}
-			$test_name = str_replace(getcwd().DIRECTORY_SEPARATOR,'',$test_file);
+			$test_name = self::short_name($test_file);
 			self::exec_setup_teardown($test_file,false);
 			self::$resultset[$test_name] = $res;
 			return array($test_name,$res);
