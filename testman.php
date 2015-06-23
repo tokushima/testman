@@ -195,6 +195,10 @@ namespace testman{
 		 * @param boolean $source
 		 */
 		public static function setup_info($dir,$source=false){
+			$dir = realpath($dir);
+			if($dir === false){
+				throw new \InvalidArgumentException($dir.' not found');
+			}
 			list($var_types,$inc_list,$target_dir) = self::setup_teardown_files($dir, true);
 			
 			$summary_list = array();
@@ -211,7 +215,7 @@ namespace testman{
 				}
 			}
 			\testman\Std::println_warning('Dir:');
-			\testman\Std::println('  '.$target_dir);
+			\testman\Std::println('  '.\testman\Runner::short_name($target_dir));
 			\testman\Std::println();
 			
 			\testman\Std::println_warning('Summary:');
@@ -2145,7 +2149,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.6.7';
+	$version = '0.6.8';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	\testman\Std::println();
 	
