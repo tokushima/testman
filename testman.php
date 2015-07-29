@@ -1365,6 +1365,54 @@ namespace testman{
 			}
 		}
 	}
+	class Util{
+		/**
+		 * 絶対パスを返す
+		 * @param string $a
+		 * @param string $b
+		 * @return string
+		 */
+		public static function path_absolute($a,$b){
+			if($b === '' || $b === null) return $a;
+			if($a === '' || $a === null || preg_match("/^[a-zA-Z]+:/",$b)) return $b;
+			if(preg_match("/^[\w]+\:\/\/[^\/]+/",$a,$h)){
+				$a = preg_replace("/^(.+?)[".(($b[0] === '#') ? '#' : "#\?")."].*$/","\\1",$a);
+				if($b[0] == '#' || $b[0] == '?') return $a.$b;
+				if(substr($a,-1) != '/') $b = (substr($b,0,2) == './') ? '.'.$b : (($b[0] != '.' && $b[0] != '/') ? '../'.$b : $b);
+				if($b[0] == '/' && isset($h[0])) return $h[0].$b;
+			}else if($b[0] == '/'){
+				return $b;
+			}
+			$p = array(
+					array('://','/./','//'),
+					array('#R#','/','/'),
+					array("/^\/(.+)$/","/^(\w):\/(.+)$/"),
+					array("#T#\\1","\\1#W#\\2",''),
+					array('#R#','#W#','#T#'),
+					array('://',':/','/')
+			);
+			$a = preg_replace($p[2],$p[3],str_replace($p[0],$p[1],$a));
+			$b = preg_replace($p[2],$p[3],str_replace($p[0],$p[1],$b));
+			$d = $t = $r = '';
+			if(strpos($a,'#R#')){
+				list($r) = explode('/',$a,2);
+				$a = substr($a,strlen($r));
+				$b = str_replace('#T#','',$b);
+			}
+			$al = preg_split("/\//",$a,-1,PREG_SPLIT_NO_EMPTY);
+			$bl = preg_split("/\//",$b,-1,PREG_SPLIT_NO_EMPTY);
+		
+			for($i=0;$i<sizeof($al)-substr_count($b,'../');$i++){
+				if($al[$i] != '.' && $al[$i] != '..') $d .= $al[$i].'/';
+			}
+			for($i=0;$i<sizeof($bl);$i++){
+				if($bl[$i] != '.' && $bl[$i] != '..') $t .= '/'.$bl[$i];
+			}
+			$t = (!empty($d)) ? substr($t,1) : $t;
+			$d = (!empty($d) && $d[0] != '/' && substr($d,0,3) != '#T#' && !strpos($d,'#W#')) ? '/'.$d : $d;
+			return str_replace($p[4],$p[5],$r.$d.$t);
+		}
+	}
 	class Browser{
 		private $resource;
 		private $agent;
@@ -1381,13 +1429,18 @@ namespace testman{
 		private $url;
 		private $status;
 	
+		private $user;
+		private $password;
+	
+		private $raw;
+	
 		public function __construct($agent=null,$timeout=30,$redirect_max=20){
 			$this->agent = $agent;
 			$this->timeout = (int)$timeout;
 			$this->redirect_max = (int)$redirect_max;
 		}
 		/**
-		 * 最大リダイレクト回数
+		 * 最大リダイレクト回数を設定
 		 * @param integer $redirect_max
 		 */
 		public function redirect_max($redirect_max){
@@ -1395,70 +1448,83 @@ namespace testman{
 			return $this;
 		}
 		/**
-		 * タイムアウトするまでの秒数
+		 * タイムアウト時間を設定
 		 * @param integer $timeout
+		 * @return $this
 		 */
 		public function timeout($timeout){
 			$this->timeout = (int)$timeout;
 			return $this;
 		}
 		/**
-		 * リクエスト時のユーザエージェント
+		 * ユーザエージェントを設定
 		 * @param string $agent
+		 * @return $this
 		 */
 		public function agent($agent){
 			$this->agent = $agent;
+			return $this;
+		}
+		/**
+		 * Basic認証
+		 * @param string $user ユーザ名
+		 * @param string $password パスワード
+		 * @return $this
+		 */
+		public function basic($user,$password){
+			$this->user = $user;
+			$this->password = $password;
 			return $this;
 		}
 		public function __toString(){
 			return $this->body();
 		}
 		/**
-		 * リクエスト時のヘッダ
+		 * ヘッダを設定
 		 * @param string $key
 		 * @param string $value
+		 * @return $this
 		 */
 		public function header($key,$value=null){
 			$this->request_header[$key] = $value;
 			return $this;
 		}
 		/**
-		 * リクエスト時のクエリ
+		 * クエリを設定
 		 * @param string $key
 		 * @param string $value
+		 * @return $this
 		 */
 		public function vars($key,$value=null){
 			if(is_bool($value)) $value = ($value) ? 'true' : 'false';
 			$this->request_vars[$key] = $value;
-			if(isset($this->request_file_vars[$key])){
-				unset($this->request_file_vars[$key]);
-			}
+			if(isset($this->request_file_vars[$key])) unset($this->request_file_vars[$key]);
 			return $this;
 		}
 		/**
-		 * リクエスト時の添付ファイル
+		 * クエリにファイルを設定
 		 * @param string $key
-		 * @param string $filepath
+		 * @param string $filename
+		 * @return $this
 		 */
-		public function file_vars($key,$filepath){
-			$this->request_file_vars[$key] = $filepath;
-			if(isset($this->request_vars[$key])){
-				unset($this->request_vars[$key]);
-			}
+		public function file_vars($key,$filename){
+			$this->request_file_vars[$key] = $filename;
+			if(isset($this->request_vars[$key])) unset($this->request_vars[$key]);
 			return $this;
 		}
 		/**
-		 * リクエストクエリがセットされているか
+		 * クエリが設定されているか
 		 * @param string $key
-		 * @return boolean
+		 * @return $this
 		 */
 		public function has_vars($key){
 			return (array_key_exists($key,$this->request_vars) || array_key_exists($key,$this->request_file_vars));
 		}
 		/**
-		 * curlへのオプション
+		 * cURL 転送用オプションを設定する
 		 * @param string $key
-		 * @param string $value
+		 * @param mixed $value
+		 * @return $this
 		 */
 		public function setopt($key,$value){
 			if(!isset($this->resource)) $this->resource = curl_init();
@@ -1466,95 +1532,134 @@ namespace testman{
 			return $this;
 		}
 		/**
-		 * 結果ヘッダの取得
-		 * @returnstring
+		 * 結果のヘッダを取得
+		 * @return string
 		 */
 		public function head(){
 			return $this->head;
 		}
 		/**
-		 * 結果ボディーの取得
+		 * 結果の本文を取得
 		 * @return string
 		 */
 		public function body(){
 			return ($this->body === null || is_bool($this->body)) ? '' : $this->body;
 		}
 		/**
-		 * 最終実行URL
+		 * 結果のURLを取得
 		 * @return string
 		 */
 		public function url(){
 			return $this->url;
 		}
 		/**
-		 * 最終HTTPステータス
+		 * 結果のステータスを取得
 		 * @return integer
 		 */
 		public function status(){
 			return empty($this->status) ? null : (int)$this->status;
 		}
 		/**
-		 * HEADでリクエスト
+		 * HEADリクエスト
 		 * @param string $url
-		 * @return self
+		 * @return $this
 		 */
 		public function do_head($url){
 			return $this->request('HEAD',$url);
 		}
 		/**
-		 * PUTでリクエスト
+		 * PUTリクエスト
 		 * @param string $url
-		 * @return self
+		 * @return $this
 		 */
 		public function do_put($url){
 			return $this->request('PUT',$url);
 		}
 		/**
-		 * DELETEでリクエスト
+		 * DELETEリクエスト
 		 * @param string $url
-		 * @return self
+		 * @return $this
 		 */
 		public function do_delete($url){
 			return $this->request('DELETE',$url);
 		}
 		/**
-		 * GETでリクエスト
+		 * GETリクエスト
 		 * @param string $url
-		 * @return self
+		 * @return $this
 		 */
 		public function do_get($url){
 			return $this->request('GET',$url);
 		}
 		/**
-		 * POSTでリクエスト
+		 * POSTリクエスト
 		 * @param string $url
-		 * @return self
+		 * @return $this
 		 */
 		public function do_post($url){
 			return $this->request('POST',$url);
 		}
 		/**
-		 * GETでリクエストしてダウンロード
+		 * POSTリクエスト(RAW)
 		 * @param string $url
-		 * @param string $download_path 保存パス
-		 * @return self
+		 * @return $this
 		 */
-		public function do_download($url,$download_path){
-			return $this->request('GET',$url,$download_path);
+		public function do_raw($url,$value){
+			$this->raw = $value;
+			return $this->request('RAW',$url);
 		}
 		/**
-		 * POSTでリクエストしてダウンロード
+		 * POSTリクエスト(JSON)
 		 * @param string $url
-		 * @param string $download_path 保存パス
-		 * @return self
+		 * @return $this
 		 */
-		public function do_post_download($url,$download_path){
-			return $this->request('POST',$url,$download_path);
+		public function do_json($url){
+			$this->header('Content-type','application/json');
+			return $this->do_raw($url,json_encode($this->request_vars));
 		}
+		/**
+		 * GETリクエストでダウンロードする
+		 * @param string $url
+		 * @param string $filename
+		 */
+		public function do_download($url,$filename){
+			return $this->request('GET',$url,$filename);
+		}
+		/**
+		 * POSTリクエストでダウンロードする
+		 * @param string $url
+		 * @param string $filename
+		 */
+		public function do_post_download($url,$filename){
+			return $this->request('POST',$url,$filename);
+		}
+		/**
+		 * ヘッダ情報をハッシュで取得する
+		 * @return string{}
+		 */
+		public function explode_head(){
+			$result = array();
+			foreach(explode("\n",$this->head) as $h){
+				if(preg_match("/^(.+?):(.+)$/",$h,$match)) $result[trim($match[1])] = trim($match[2]);
+			}
+			return $result;
+		}
+		/**
+		 * ヘッダデータを書き込む処理
+		 * @param resource $resource
+		 * @param string $data
+		 * @return number
+		 */
 		public function callback_head($resource,$data){
 			$this->head .= $data;
 			return strlen($data);
 		}
+		/**
+		 * データを書き込む処理
+		 * @param resource $resource
+		 * @param string $data
+		 * @return number
+		 */
 		public function callback_body($resource,$data){
 			$this->body .= $data;
 			return strlen($data);
@@ -1562,21 +1667,20 @@ namespace testman{
 		private function request($method,$url,$download_path=null){
 			if(!isset($this->resource)) $this->resource = curl_init();
 			$url_info = parse_url($url);
-			$host = isset($url_info['host']) ? $url_info['host'] : '';
-			$cookie_base_path = $host.(isset($url_info['path']) ? $url_info['path'] : '');
+			$cookie_base_domain = (isset($url_info['host']) ? $url_info['host'] : '').(isset($url_info['path']) ? $url_info['path'] : '');
+
 			if(\testman\Coverage::has_link($vars)){
 				$this->request_vars[\testman\Coverage::link()] = $vars;
 			}
 			if(isset($url_info['query'])){
 				parse_str($url_info['query'],$vars);
 				foreach($vars as $k => $v){
-					if(!isset($this->request_vars[$k])){
-						$this->request_vars[$k] = $v;
-					}
+					if(!isset($this->request_vars[$k])) $this->request_vars[$k] = $v;
 				}
 				list($url) = explode('?',$url,2);
 			}
 			switch($method){
+				case 'RAW';
 				case 'POST': curl_setopt($this->resource,CURLOPT_POST,true); break;
 				case 'GET': curl_setopt($this->resource,CURLOPT_HTTPGET,true); break;
 				case 'HEAD': curl_setopt($this->resource,CURLOPT_NOBODY,true); break;
@@ -1605,6 +1709,10 @@ namespace testman{
 						curl_setopt($this->resource,CURLOPT_POSTFIELDS,http_build_query($this->request_vars));
 					}
 					break;
+				case 'RAW':
+					$this->request_header['Content-Type'] = 'text/plain';
+					curl_setopt($this->resource,CURLOPT_POSTFIELDS,$this->raw);
+					break;
 				case 'GET':
 				case 'HEAD':
 				case 'PUT':
@@ -1619,17 +1727,16 @@ namespace testman{
 			curl_setopt($this->resource,CURLOPT_FAILONERROR,false);
 			curl_setopt($this->resource,CURLOPT_TIMEOUT,$this->timeout);
 	
-			if(\testman\Conf::get('ssl-verify',true) === false){
-				curl_setopt($this->resource, CURLOPT_SSL_VERIFYHOST,false);
-				curl_setopt($this->resource, CURLOPT_SSL_VERIFYPEER,false);
-			}			
+			if(!empty($this->user)){
+				curl_setopt($this->resource,CURLOPT_USERPWD,$this->user.':'.$this->password);
+			}
 			if(!isset($this->request_header['Expect'])){
 				$this->request_header['Expect'] = null;
 			}
 			if(!isset($this->request_header['Cookie'])){
 				$cookies = '';
 				foreach($this->cookie as $domain => $cookie_value){
-					if(strpos($cookie_base_path,$domain) === 0 || strpos($cookie_base_path,(($domain[0] == '.') ? $domain : '.'.$domain)) !== false){
+					if(strpos($cookie_base_domain,$domain) === 0 || strpos($cookie_base_domain,(($domain[0] == '.') ? $domain : '.'.$domain)) !== false){
 						foreach($cookie_value as $k => $v){
 							if(!$v['secure'] || ($v['secure'] && substr($url,0,8) == 'https://')) $cookies .= sprintf('%s=%s; ',$k,$v['value']);
 						}
@@ -1654,64 +1761,50 @@ namespace testman{
 			if(!isset($this->request_header['Accept-Charset']) && isset($_SERVER['HTTP_ACCEPT_CHARSET'])){
 				$this->request_header['Accept-Charset'] = $_SERVER['HTTP_ACCEPT_CHARSET'];
 			}
-			curl_setopt($this->resource,
-				CURLOPT_HTTPHEADER,
-				array_map(
-					function($k,$v){
-						return $k.': '.$v;
-					},
-					array_keys($this->request_header),
-					$this->request_header
-				)
+	
+			curl_setopt($this->resource,CURLOPT_HTTPHEADER,
+			array_map(function($k,$v){
+				return $k.': '.$v;
+			}
+			,array_keys($this->request_header)
+			,$this->request_header
+			)
 			);
 			curl_setopt($this->resource,CURLOPT_HEADERFUNCTION,array($this,'callback_head'));
 	
 			if(empty($download_path)){
 				curl_setopt($this->resource,CURLOPT_WRITEFUNCTION,array($this,'callback_body'));
 			}else{
-				if(!is_dir(dirname($download_path))) mkdir(dirname($download_path),0777,true);
+				if(strpos($download_path,'://') === false && !is_dir(dirname($download_path))){
+					mkdir(dirname($download_path),0777,true);
+				}
 				$fp = fopen($download_path,'wb');
-				
+					
 				curl_setopt($this->resource,CURLOPT_WRITEFUNCTION,function($resource,$data) use(&$fp){
 					if($fp) fwrite($fp,$data);
 					return strlen($data);
 				});
 			}
 			$this->request_header = $this->request_vars = array();
-			$this->head = $this->body = '';
+			$this->head = $this->body = $this->raw = '';
 			curl_exec($this->resource);
 			if(!empty($download_path) && $fp){
 				fclose($fp);
 			}
 			if(($err_code = curl_errno($this->resource)) > 0){
 				if($err_code == 47 || $err_code == 52) return $this;
-				throw new \RuntimeException($err_code.': '.curl_error($this->resource).', ['.$method.'] '.$url);
+				throw new \RuntimeException($err_code.': '.curl_error($this->resource));
 			}
-	
-			$this->status = curl_getinfo($this->resource,CURLINFO_HTTP_CODE);
 			$this->url = curl_getinfo($this->resource,CURLINFO_EFFECTIVE_URL);
+			$this->status = curl_getinfo($this->resource,CURLINFO_HTTP_CODE);
 	
-			if(strpos($this->url,'?') !== false){
-				list($url,$query) = explode('?',$this->url,2);
-				if(!empty($query)){
-					parse_str($query,$vars);
-					
-					if(isset($vars[\testman\Coverage::link()])){
-						unset($vars[\testman\Coverage::link()]);
-					}
-					if(!empty($vars)){
-						$url = $url.'?'.http_build_query($vars);
-					}
-				}
-				$this->url = $url;
-			}
 			if(preg_match_all('/Set-Cookie:[\s]*(.+)/i',$this->head,$match)){
 				foreach($match[1] as $cookies){
 					$cookie_name = $cookie_value = $cookie_domain = $cookie_path = $cookie_expires = null;
-					$cookie_domain = $host;
+					$cookie_domain = $cookie_base_domain;
 					$cookie_path = '/';
 					$secure = false;
-					
+	
 					foreach(explode(';',$cookies) as $cookie){
 						$cookie = trim($cookie);
 						if(strpos($cookie,'=') !== false){
@@ -1732,8 +1825,7 @@ namespace testman{
 							$secure = true;
 						}
 					}
-					$cookie_domain = $cookie_domain.$cookie_path;
-					
+					$cookie_domain = substr(\testman\Util::path_absolute('http://'.$cookie_domain,$cookie_path),7);
 					if($cookie_expires !== null && $cookie_expires < time()){
 						if(isset($this->cookie[$cookie_domain][$cookie_name])) unset($this->cookie[$cookie_domain][$cookie_name]);
 					}else{
@@ -1752,12 +1844,11 @@ namespace testman{
 					case 303:
 					case 307:
 						if(preg_match('/Location:[\040](.*)/i',$this->head,$redirect_url)){
-							return $this->request('GET',trim($redirect_url[1]),$download_path);
+							return $this->request('GET',trim(\testman\Util::path_absolute($url,$redirect_url[1])),$download_path);
 						}
 				}
 			}
 			$this->redirect_count = 1;
-	
 			return $this;
 		}
 		public function __destruct(){
@@ -1765,38 +1856,35 @@ namespace testman{
 		}
 		/**
 		 * bodyを解析しXMLオブジェクトとして返す
-		 * @param string $name
 		 * @return \testman\Xml
 		 */
-		public function xml($name=null){
-			try{
-				return \testman\Xml::extract($this->body(),$name);
-			}catch(\testman\NotFoundException $e){
-				throw new \testman\NotFoundException($e->getMessage().': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
-			}
+		public function xml(){
+			return \testman\Xml::extract($this->body());
 		}
 		/**
 		 * bodyを解析し配列として返す
 		 * @param string $name
 		 * @param string $delimiter
+		 * @return mixed{}
 		 */
 		public function json($name=null,$delimiter='/'){
 			$array = json_decode($this->body(),true);
-			
+				
 			if($array === false){
-				throw new \testman\NotFoundException('Invalid data: '.': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
+				throw new \testman\NotFoundException('Invalid data');
 			}
 			$names = explode($delimiter,$name);
 			foreach($names as $key){
 				if(array_key_exists($key,$array)){
 					$array = $array[$key];
 				}else{
-					throw new \testman\NotFoundException($name.' not found: '.': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
+					throw new \testman\NotFoundException($name.' not found');
 				}
 			}
 			return $array;
 		}
 	}
+	
 	class Args{
 		static private $opt = array();
 		static private $value = array();
