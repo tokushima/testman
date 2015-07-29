@@ -1680,7 +1680,7 @@ namespace testman{
 				list($url) = explode('?',$url,2);
 			}
 			switch($method){
-				case 'RAW';
+				case 'RAW':
 				case 'POST': curl_setopt($this->resource,CURLOPT_POST,true); break;
 				case 'GET': curl_setopt($this->resource,CURLOPT_HTTPGET,true); break;
 				case 'HEAD': curl_setopt($this->resource,CURLOPT_NOBODY,true); break;
