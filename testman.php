@@ -1669,13 +1669,16 @@ namespace testman{
 			$url_info = parse_url($url);
 			$cookie_base_domain = (isset($url_info['host']) ? $url_info['host'] : '').(isset($url_info['path']) ? $url_info['path'] : '');
 
+			// set coverage query
 			if(\testman\Coverage::has_link($vars)){
 				$this->request_vars[\testman\Coverage::link()] = $vars;
 			}
 			if(isset($url_info['query'])){
 				parse_str($url_info['query'],$vars);
 				foreach($vars as $k => $v){
-					if(!isset($this->request_vars[$k])) $this->request_vars[$k] = $v;
+					if(!isset($this->request_vars[$k])){
+						$this->request_vars[$k] = $v;
+					}
 				}
 				list($url) = explode('?',$url,2);
 			}
@@ -1746,10 +1749,10 @@ namespace testman{
 			}
 			if(!isset($this->request_header['User-Agent'])){
 				curl_setopt($this->resource,CURLOPT_USERAGENT,
-				(empty($this->agent) ?
-				(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null) :
-				$this->agent
-				)
+					(empty($this->agent) ?
+						(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null) :
+						$this->agent
+					)
 				);
 			}
 			if(!isset($this->request_header['Accept']) && isset($_SERVER['HTTP_ACCEPT'])){
@@ -1763,12 +1766,13 @@ namespace testman{
 			}
 	
 			curl_setopt($this->resource,CURLOPT_HTTPHEADER,
-			array_map(function($k,$v){
-				return $k.': '.$v;
-			}
-			,array_keys($this->request_header)
-			,$this->request_header
-			)
+				array_map(
+					function($k,$v){
+						return $k.': '.$v;
+					}
+					,array_keys($this->request_header)
+					,$this->request_header
+				)
 			);
 			curl_setopt($this->resource,CURLOPT_HEADERFUNCTION,array($this,'callback_head'));
 	
@@ -1788,6 +1792,7 @@ namespace testman{
 			$this->request_header = $this->request_vars = array();
 			$this->head = $this->body = $this->raw = '';
 			curl_exec($this->resource);
+			
 			if(!empty($download_path) && $fp){
 				fclose($fp);
 			}
@@ -1798,6 +1803,21 @@ namespace testman{
 			$this->url = curl_getinfo($this->resource,CURLINFO_EFFECTIVE_URL);
 			$this->status = curl_getinfo($this->resource,CURLINFO_HTTP_CODE);
 	
+			// remove coverage query
+			if(strpos($this->url,'?') !== false){
+				list($url,$query) = explode('?',$this->url,2);
+				if(!empty($query)){
+					parse_str($query,$vars);
+						
+					if(isset($vars[\testman\Coverage::link()])){
+						unset($vars[\testman\Coverage::link()]);
+					}
+					if(!empty($vars)){
+						$url = $url.'?'.http_build_query($vars);
+					}
+				}
+				$this->url = $url;
+			}
 			if(preg_match_all('/Set-Cookie:[\s]*(.+)/i',$this->head,$match)){
 				foreach($match[1] as $cookies){
 					$cookie_name = $cookie_value = $cookie_domain = $cookie_path = $cookie_expires = null;
