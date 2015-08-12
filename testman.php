@@ -337,10 +337,7 @@ namespace testman{
 				throw new \InvalidArgumentException($testdir.' not found');
 			}
 			self::$start = true;
-
-			if(substr(PHP_OS,0,3) != 'WIN'){
-				`stty -echo`;
-			}
+			
 			try{
 				for($i=0;$i<5;$i++){
 					\testman\Std::println();
@@ -359,10 +356,11 @@ namespace testman{
 					date_default_timezone_set('Asia/Tokyo');
 				}
 				if(extension_loaded('mbstring')){
-					if('neutral' == mb_language()) mb_language('Japanese');
+					if('neutral' == mb_language()){
+						mb_language('Japanese');
+					}
 					mb_internal_encoding('UTF-8');
 				}
-				
 				if(function_exists('opcache_reset')){
 					opcache_reset();
 				}
@@ -405,7 +403,7 @@ namespace testman{
 				
 				if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
 					$msg = 'Init: '.$f;
-					\testman\Std::p($msg,'36');					
+					\testman\Std::p($msg,'36');
 						include_once($f);
 					\testman\Std::bs(strlen($msg));
 				}
@@ -511,10 +509,6 @@ namespace testman{
 				\testman\Std::println();
 			}catch(\Exception $e){
 				\testman\Std::println_danger(PHP_EOL.PHP_EOL.'Failure:'.PHP_EOL.PHP_EOL.$e->getMessage().PHP_EOL.$e->getTraceAsString());
-			}
-			
-			if(substr(PHP_OS,0,3) != 'WIN'){
-				`stty echo`;
 			}
 			return self::$resultset;
 		}
@@ -2238,7 +2232,23 @@ namespace{
 		function b(){
 			return new \testman\Browser();
 		}
-	}	
+	}
+
+	if(!function_exists('rand_id')){
+		/**
+		 * ランダムなID を生成する
+		 * @return  string
+		 */
+		function rand_id($id,$length=32){
+			$code = '';
+			
+			for($i=0;$i<=$length;$i+=32){
+				$code .= md5(base64_encode($id.microtime().rand(1,9999999)));
+			}
+			return substr($code,$length*-1);
+		}
+	}
+	
 	
 	// include
 	$debug = debug_backtrace(false);
@@ -2261,7 +2271,7 @@ namespace{
 			\testman\Conf::set($k,$v);
 		}
 	}
-	$version = '0.6.8';
+	$version = '0.6.9';
 	\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
 	\testman\Std::println();
 	
