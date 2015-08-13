@@ -1891,6 +1891,9 @@ namespace testman{
 			if($array === false){
 				throw new \testman\NotFoundException('Invalid data: '.': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
 			}
+			if(empty($name)){
+				return $array;
+			}
 			$names = explode($delimiter,$name);
 			foreach($names as $key){
 				if(array_key_exists($key,$array)){
