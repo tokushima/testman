@@ -48,7 +48,7 @@ namespace testman{
 				$dir = str_replace('phar://','',dirname($dir));
 			}
 			if(!is_dir($dir)){
-				throw new \InvalidArgumentException('Not found '.$dir);
+				throw new \InvalidArgumentException('not found '.$dir);
 			}
 			return $dir.'/'.$name;
 		}
@@ -2262,7 +2262,8 @@ namespace{
 	\testman\Args::init();
 	$testdir = realpath(\testman\Args::value(getcwd().'/test'));
 	if($testdir === false){
-		die(\testman\Args::value().' found'.PHP_EOL);
+		\testman\Std::println_danger(\testman\Args::value().' not found');
+		exit;
 	}
 	if(is_file($f=getcwd().'/bootstrap.php') || is_file($f=getcwd().'/vendor/autoload.php')){
 		ob_start();
