@@ -1888,7 +1888,7 @@ namespace testman{
 		public function json($name=null,$delimiter='/'){
 			$array = json_decode($this->body(),true);
 			
-			if($array === false){
+			if($array === false || $array === null){
 				throw new \testman\NotFoundException('Invalid data: '.': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
 			}
 			if(empty($name)){
