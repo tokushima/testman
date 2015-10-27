@@ -195,8 +195,7 @@ foreach(array('coverage','output','coverage-dir') as $k){
 		\testman\Conf::set($k,$v);
 	}
 }
-$version = '0.6.9';
-\testman\Std::println('testman '.$version.' (PHP '.phpversion().')'); // version
+\testman\Std::println('testman (PHP '.phpversion().')'); // version
 \testman\Std::println();
 
 if(\testman\Args::opt('help')){
