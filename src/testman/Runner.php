@@ -383,16 +383,16 @@ class Runner{
 			ob_end_clean();
 		}catch(\Exception $e){
 			$trace = $e->getTrace();
-			$root = preg_replace('/^(phar:\/\/.+\.phar)\/src\/testman\/.+$/','\\1',__FILE__);
+			$root = preg_replace('/^phar:\/\/(.+\.phar)\/src\/testman\/.+$/','\\1',__FILE__);
 			
 			for($i=sizeof($trace);$i>=0;$i--){
 				if(isset($trace[$i]['file']) && strpos($trace[$i]['file'],$root) === false){
-					$res = array(-2,0,$trace[$i]['file'],$trace[$i]['line'],(string)$e);
+					$res = array(-2,0,$trace[$i]['file'],$trace[$i]['line'],((string)$e).PHP_EOL.$trace[$i]['file'].PHP_EOL.$root);
 					break;
 				}
 			}
 			if(!isset($res)){
-				$res = array(-2,0,$e->getFile(),$e->getLine(),(string)$e);
+				$res = array(-2,0,$e->getFile(),$e->getLine(),((string)$e));
 			}
 			ob_end_clean();
 		}
