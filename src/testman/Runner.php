@@ -383,12 +383,12 @@ class Runner{
 			ob_end_clean();
 		}catch(\Exception $e){
 			$trace = $e->getTrace();
+			$root = preg_replace('/^(phar:\/\/.+\.phar)\/src\/testman\/.+$/','\\1',__FILE__);
+			
 			for($i=sizeof($trace);$i>=0;$i--){
-				if(isset($trace[$i]['file']) && $trace[$i]['file'] != __FILE__){
-					if(!(substr(__FILE__,0,7) == 'phar://' && dirname(substr(__FILE__,7)) == $trace[$i]['file'])){
-						$res = array(-2,0,$trace[$i]['file'],$trace[$i]['line'],(string)$e);
-						break;
-					}
+				if(isset($trace[$i]['file']) && strpos($trace[$i]['file'],$root) === false){
+					$res = array(-2,0,$trace[$i]['file'],$trace[$i]['line'],(string)$e);
+					break;
 				}
 			}
 			if(!isset($res)){
