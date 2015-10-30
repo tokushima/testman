@@ -490,7 +490,7 @@ class Browser{
 		}
 		$names = explode($delimiter,$name);
 		foreach($names as $key){
-			if(array_key_exists($key,$array)){
+			if(is_array($array) && array_key_exists($key,$array)){
 				$array = $array[$key];
 			}else{
 				throw new \testman\NotFoundException($name.' not found: '.': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
