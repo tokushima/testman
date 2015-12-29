@@ -32,7 +32,7 @@ class XmlIterator implements \Iterator{
 			$this->name = explode('|',$this->name);
 		}
 		if(is_array($this->name)){
-			$tags = array();
+			$tags = [];
 			foreach($this->name as $name){
 				try{
 					$get_tag = \testman\Xml::extract($this->plain,$name);

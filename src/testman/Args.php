@@ -2,15 +2,15 @@
 namespace testman;
 
 class Args{
-	static private $opt = array();
-	static private $value = array();
+	static private $opt = [];
+	static private $value = [];
 
 	/**
 	 * 初期化
 	*/
 	public static function init(){
-		$opt = $value = array();
-		$argv = array_slice((isset($_SERVER['argv']) ? $_SERVER['argv'] : array()),1);
+		$opt = $value = [];
+		$argv = array_slice((isset($_SERVER['argv']) ? $_SERVER['argv'] : []),1);
 			
 		for($i=0;$i<sizeof($argv);$i++){
 			if(substr($argv[$i],0,2) == '--'){
@@ -54,7 +54,7 @@ class Args{
 	 * @return multitype:
 	 */
 	public static function opts($name){
-		return array_key_exists($name,self::$opt) ? self::$opt[$name] : array();
+		return array_key_exists($name,self::$opt) ? self::$opt[$name] : [];
 	}
 	/**
 	 * 引数を全て取得

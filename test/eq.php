@@ -8,8 +8,8 @@ eq(false,false);
 
 eq('A','A');
 
-$obj1 = (object)array('a'=>1,'b'=>2);
-$obj2 = (object)array('a'=>1,'b'=>2);
+$obj1 = (object)['a'=>1,'b'=>2];
+$obj2 = (object)['a'=>1,'b'=>2];
 eq($obj1,$obj2);
 
 $xml = new \testman\Xml('abc','ABCDEFG');

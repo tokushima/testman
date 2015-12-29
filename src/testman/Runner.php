@@ -2,10 +2,10 @@
 namespace testman;
 
 class Runner{
-	static private $resultset = array();
+	static private $resultset = [];
 	static private $current_test;
 	static private $start = false;
-	static private $vars = array();
+	static private $vars = [];
 
 	/**
 	 * 現在実行しているテスト
@@ -221,7 +221,7 @@ class Runner{
 			return $testsuite;
 		};
 
-		$list = array();
+		$list = [];
 		foreach(self::$resultset as $file => $info){
 			$list[dirname($file)][basename($file)] = $info;
 		}
@@ -356,7 +356,7 @@ class Runner{
 		return str_replace(getcwd().DIRECTORY_SEPARATOR,'',$test_file);
 	}
 	private static function exec($test_file){
-		self::$vars = array();
+		self::$vars = [];
 		self::$current_test = $test_file;
 			
 		try{
@@ -376,10 +376,10 @@ class Runner{
 						: $m[0]);
 				throw new \RuntimeException($err);
 			}
-			$res = array(1,(round(microtime(true) - $test_exec_start_time,3)));
+			$res = [1,(round(microtime(true) - $test_exec_start_time,3))];
 		}catch(\testman\AssertFailure $e){
 			list($debug) = $e->getTrace();
-			$res = array(-1,0,$debug['file'],$debug['line'],$e->getMessage(),$e->expectation(),$e->result(),$e->has());
+			$res = [-1,0,$debug['file'],$debug['line'],$e->getMessage(),$e->expectation(),$e->result(),$e->has()];
 			ob_end_clean();
 		}catch(\Exception $e){
 			$trace = $e->getTrace();
@@ -387,18 +387,18 @@ class Runner{
 			
 			for($i=sizeof($trace);$i>=0;$i--){
 				if(isset($trace[$i]['file']) && strpos($trace[$i]['file'],$root) === false){
-					$res = array(-2,0,$trace[$i]['file'],$trace[$i]['line'],((string)$e).PHP_EOL.$trace[$i]['file'].PHP_EOL.$root);
+					$res = [-2,0,$trace[$i]['file'],$trace[$i]['line'],((string)$e).PHP_EOL.$trace[$i]['file'].PHP_EOL.$root];
 					break;
 				}
 			}
 			if(!isset($res)){
-				$res = array(-2,0,$e->getFile(),$e->getLine(),((string)$e));
+				$res = [-2,0,$e->getFile(),$e->getLine(),((string)$e)];
 			}
 			ob_end_clean();
 		}
 		$test_name = self::short_name($test_file);
 		self::exec_setup_teardown($test_file,false);
 		self::$resultset[$test_name] = $res;
-		return array($test_name,$res);
+		return [$test_name,$res];
 	}
 }

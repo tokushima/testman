@@ -2,7 +2,7 @@
 namespace testman;
 
 class Conf{
-	static private $conf = array();
+	static private $conf = [];
 
 	/**
 	 * セット

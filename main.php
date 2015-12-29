@@ -4,7 +4,7 @@ if(php_sapi_name() !== 'cli'){
 	$linkkey = \testman\Coverage::link();
 
 	if(isset($_POST[$linkkey]) || isset($_GET[$linkkey])){
-		$linkvars = isset($_POST[$linkkey]) ? $_POST[$linkkey] : (isset($_GET[$linkkey]) ? $_GET[$linkkey] : array());
+		$linkvars = isset($_POST[$linkkey]) ? $_POST[$linkkey] : (isset($_GET[$linkkey]) ? $_GET[$linkkey] : []);
 		if(isset($_POST[$linkkey])){
 			unset($_POST[$linkkey]);
 		}
@@ -24,7 +24,7 @@ if(php_sapi_name() !== 'cli'){
 
 						foreach(xdebug_get_code_coverage() as $file_path => $lines){
 							if(false !== ($i = array_search($file_path,$target_list))){
-								fwrite($fp,json_encode(array($i,$lines)).PHP_EOL);
+								fwrite($fp,json_encode([$i,$lines]).PHP_EOL);
 							}
 						}
 						fclose($fp);
@@ -41,6 +41,15 @@ if(php_sapi_name() !== 'cli'){
 
 
 // set functions
+if(!function_exists('conf_urls')){
+	/**
+	 * mapにurlを定義する
+	 * @param array $urls
+	 */
+	function conf_urls(array $urls){
+		\testman\Conf::set('urls',$urls);
+	}
+}
 if(!function_exists('fail')){
 	/**
 	 * 失敗とする
@@ -135,8 +144,11 @@ if(!function_exists('url')){
 	function url($map_name){
 		$args = func_get_args();
 		array_shift($args);
-		$urls = \testman\Conf::get('urls',array());
+		$urls = \testman\Conf::get('urls',[]);
 
+		if(empty($ruls) && class_exists('\ebi\Dt')){
+			$urls = \ebi\Dt::get_urls();
+		}
 		if(empty($urls) || !is_array($urls)){
 			throw new \testman\NotFoundException('urls empty');
 		}
@@ -155,7 +167,14 @@ if(!function_exists('b')){
 		return new \testman\Browser();
 	}
 }
-
+/**
+ * テスト用リソースファイルのパスを取得する
+ */
+if(!function_exists('resource')){
+	function resource($file){
+		return \testman\Resource::path($file);
+	}
+}
 if(!function_exists('rand_id')){
 	/**
 	 * ランダムなID を生成する
@@ -170,6 +189,7 @@ if(!function_exists('rand_id')){
 		return substr($code,$length*-1);
 	}
 }
+
 
 
 
@@ -190,7 +210,7 @@ if(is_file($f=getcwd().'/bootstrap.php') || is_file($f=getcwd().'/vendor/autoloa
 		include_once($f);
 	ob_end_clean();
 }
-foreach(array('coverage','output','coverage-dir') as $k){
+foreach(['coverage','output','coverage-dir'] as $k){
 	if(($v = \testman\Args::opt($k,null)) !== null && !is_bool($v)){
 		\testman\Conf::set($k,$v);
 	}

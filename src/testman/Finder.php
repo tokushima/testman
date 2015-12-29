@@ -9,7 +9,7 @@ class Finder{
 	 * @return stirng[]
 	 */
 	public static function get_list($test_dir){
-		$test_list = array();
+		$test_list = [];
 
 		if(is_dir($test_dir)){
 			foreach(new \RegexIterator(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($test_dir,
@@ -42,15 +42,15 @@ class Finder{
 				
 			if(preg_match('/\/\*.+?\*\//s',$src,$m)){
 				list($summary) = explode(PHP_EOL,trim(
-						preg_replace('/@.+/','',
-								preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$m[0]))
-						)
+					preg_replace('/@.+/','',
+						preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(['/'.'**','*'.'/'],'',$m[0]))
+					)
 				));
 			}
 			return $summary;
 		};
 		$len = 8;
-		$test_list = array();
+		$test_list = [];
 		foreach(self::get_list($testdir) as $test_path){
 			$src = file_get_contents($test_path);
 
@@ -60,7 +60,7 @@ class Finder{
 				if($len < strlen($name)){
 					$len = strlen($name);
 				}
-				$test_list[$name] = array('path'=>$test_path,'summary'=>$summary($src));
+				$test_list[$name] = ['path'=>$test_path,'summary'=>$summary($src)];
 			}
 		}
 		foreach($test_list as $name => $info){
@@ -82,7 +82,7 @@ class Finder{
 		}
 		list($var_types,$inc_list,$target_dir) = self::setup_teardown_files($dir, true);
 			
-		$summary_list = array();
+		$summary_list = [];
 		foreach($inc_list as $inc){
 			$summary_list[] = empty($inc['summary']) ? '[NONE]' : $inc['summary'];
 		}
@@ -140,17 +140,17 @@ class Finder{
 	public static function setup_teardown_files($testdir,$is_setup){
 		if(is_dir($dir=$testdir) || is_dir($dir=dirname($testdir))){
 			$file = ($is_setup) ? '__setup__.php' : '__teardown__.php';
-			$inc_list = array();
-			$var_types = array();
+			$inc_list = [];
+			$var_types = [];
 			$target_dir = $dir;
 
 			while(strlen($dir) >= strlen(getcwd())){
 				if(is_file($f=($dir.'/'.$file))){
-					$varnames = array();
+					$varnames = [];
 					$summary = null;
 
 					if($is_setup && preg_match('/\/\*.+?\*\//s',file_get_contents($f),$_m)){
-						$desc = preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(array("/"."**","*"."/"),"",$_m[0]));
+						$desc = preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(['/'.'**','*'.'/'],'',$_m[0]));
 							
 						if(preg_match_all('/@.+/',$desc,$_as)){
 							foreach($_as[0] as $_m){
@@ -171,15 +171,15 @@ class Finder{
 						}
 						list($summary) = explode(PHP_EOL,trim(preg_replace('/@.+/','',$desc)));
 					}
-					$inc_list[] = array('path'=>$f,'vars'=>$varnames,'summary'=>$summary);
+					$inc_list[] = ['path'=>$f,'vars'=>$varnames,'summary'=>$summary];
 				}
 				$dir = dirname($dir);
 			}
 			if($is_setup){
 				krsort($inc_list);
 			}
-			return array($var_types,$inc_list,$target_dir);
+			return [$var_types,$inc_list,$target_dir];
 		}
-		return array(array(),array(),'');
+		return [[],[],''];
 	}
 }

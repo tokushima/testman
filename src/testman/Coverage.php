@@ -3,8 +3,8 @@ namespace testman;
 
 class Coverage{
 	static private $db;
-	static private $result = array();
-	static private $linkvars = array();
+	static private $result = [];
+	static private $linkvars = [];
 
 	/**
 	 * リンクファイルが存在するか
@@ -88,7 +88,7 @@ class Coverage{
 
 			foreach(xdebug_get_code_coverage() as $file_path => $lines){
 				if(false !== ($i = array_search($file_path,$target_list))){
-					fwrite($fp,json_encode(array($i,$lines)).PHP_EOL);
+					fwrite($fp,json_encode([$i,$lines]).PHP_EOL);
 				}
 			}
 			fclose($fp);
@@ -100,7 +100,7 @@ class Coverage{
 						$filename = $target_list[$cov[0]];
 							
 						if(!isset(self::$result[$filename])){
-							self::$result[$filename] = array('covered_line_status'=>array(),'uncovered_line_status'=>array(),'test'=>1);
+							self::$result[$filename] = ['covered_line_status'=>[],'uncovered_line_status'=>[],'test'=>1];
 						}
 						foreach($cov[1] as $line => $status){
 							if($status == 1){
@@ -120,7 +120,7 @@ class Coverage{
 			}
 			foreach($target_list as $filename){
 				if(!isset(self::$result[$filename])){
-					self::$result[$filename] = array('covered_line'=>array(),'uncovered_line'=>array(),'test'=>0);
+					self::$result[$filename] = ['covered_line'=>[],'uncovered_line'=>[],'test'=>0];
 				}
 			}
 			ksort(self::$result);
@@ -208,13 +208,13 @@ class Coverage{
 		$xml = \testman\Xml::extract(file_get_contents($xml_file),'coverage');
 		$create_date = strtotime($xml->in_attr('create_date'));
 			
-		self::$result = array();
+		self::$result = [];
 		foreach($xml->find('file') as $file){
-			self::$result[$file->in_attr('name')] = array(
-					'covered_line'=>explode(',',$file->find_get('covered_lines')->value()),
-					'uncovered_line'=>explode(',',$file->find_get('uncovered_lines')->value()),
-					'test'=>(($file->in_attr('test') == 'true') ? 1 : 0),
-			);
+			self::$result[$file->in_attr('name')] = [
+				'covered_line'=>explode(',',$file->find_get('covered_lines')->value()),
+				'uncovered_line'=>explode(',',$file->find_get('uncovered_lines')->value()),
+				'test'=>(($file->in_attr('test') == 'true') ? 1 : 0),
+			];
 		}
 		return $create_date;
 	}

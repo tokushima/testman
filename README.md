@@ -1,8 +1,6 @@
 #testman
 
-(PHP 5 >= 5.3.0)
-
-![my image](resources/image/testman.png)
+(PHP 5 >= 5.5.0)
 
 #Download
 	$ mkdir test
@@ -321,9 +319,3 @@
 		 * @return \testman\Xml
 		 */
 		extract($plain,$name=null)
-
-
-
-# router for PHP Built-in server (automatic rewrite rules)
-
-	$ php -S localhost:8000 phar://test/testman.phar/router.php

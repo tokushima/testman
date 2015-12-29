@@ -4,7 +4,7 @@ $xml = new \testman\Xml("test");
 eq("hoge",$xml->value("hoge"));
 eq("true",$xml->value(true));
 eq("false",$xml->value(false));
-eq("<abc>1</abc><def>2</def><ghi>3</ghi>",$xml->value(array("abc"=>1,"def"=>2,"ghi"=>3)));
+eq("<abc>1</abc><def>2</def><ghi>3</ghi>",$xml->value(["abc"=>1,"def"=>2,"ghi"=>3]));
 eq(null,$xml->value(''));
 eq(1,$xml->value('1'));
 eq(null,$xml->value(null));

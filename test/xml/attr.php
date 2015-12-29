@@ -23,13 +23,13 @@ $x->attr("abc",123);
 $x->attr("def",456);
 $x->attr("ghi",789);
 
-eq(array("abc"=>123,"def"=>456,"ghi"=>789),iterator_to_array($x));
+eq(["abc"=>123,"def"=>456,"ghi"=>789],iterator_to_array($x));
 $x->rm_attr("def");
-eq(array("abc"=>123,"ghi"=>789),iterator_to_array($x));
+eq(["abc"=>123,"ghi"=>789],iterator_to_array($x));
 $x->attr("def",456);
-eq(array("abc"=>123,"ghi"=>789,"def"=>456),iterator_to_array($x));
+eq(["abc"=>123,"ghi"=>789,"def"=>456],iterator_to_array($x));
 $x->rm_attr("abc","ghi");
-eq(array("def"=>456),iterator_to_array($x));
+eq(["def"=>456],iterator_to_array($x));
 
 
 // is 
@@ -62,7 +62,7 @@ $x->attr("Abc",null);
 eq(null,$x->in_attr("abc"));
 $x->attr("ghi",null);
 eq(null,$x->in_attr("ghi"));
-eq(array("abc"=>null,"def"=>555,"ghi"=>null),iterator_to_array($x));
+eq(["abc"=>null,"def"=>555,"ghi"=>null],iterator_to_array($x));
 
 $x->attr("Jkl","Jkl");
-eq(array("abc"=>null,"def"=>555,"ghi"=>null,"jkl"=>"Jkl"),iterator_to_array($x));
+eq(["abc"=>null,"def"=>555,"ghi"=>null,"jkl"=>"Jkl"],iterator_to_array($x));
