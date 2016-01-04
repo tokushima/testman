@@ -221,16 +221,16 @@ class Coverage{
 
 	public static function output_source($source_file,$coverage_date){
 		if(!is_file($source_file)){
-			throw new \testman\NotFoundException('ない');
+			throw new \testman\NotFoundException($source_file.' not found');
 		}
 		$source_file = realpath($source_file);
 		$path = str_replace(getcwd().DIRECTORY_SEPARATOR,'',$source_file);
 			
 		if(!isset(self::$result[$path])){
-			throw new \testman\NotFoundException('かアレッジない');
+			throw new \testman\NotFoundException('Coverage data not found');
 		}
-		if(filemtime($source_file) > strtotime($coverage_date)){
-			throw new \testman\NotFoundException('更新されちゃってる');
+		if(filemtime($source_file) > $coverage_date){
+			throw new \testman\NotFoundException('Updated ('.date('Y/m/d H:i:s',filemtime($source_file)).')');
 		}
 		$source_list = explode(PHP_EOL,file_get_contents($source_file));
 			
