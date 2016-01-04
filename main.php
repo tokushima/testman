@@ -216,6 +216,8 @@ foreach(['coverage','output','coverage-dir'] as $k){
 	}
 }
 \testman\Std::println('testman (PHP '.phpversion().')'); // version
+
+
 \testman\Std::println();
 
 if(\testman\Args::opt('help')){

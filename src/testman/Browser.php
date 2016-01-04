@@ -396,8 +396,8 @@ class Browser{
 			list($url,$query) = explode('?',$this->url,2);
 			if(!empty($query)){
 				parse_str($query,$vars);
-
-				if(isset($vars[\testman\Coverage::link()])){
+				
+				if(array_key_exists(\testman\Coverage::link(),$vars)){
 					unset($vars[\testman\Coverage::link()]);
 				}
 				if(!empty($vars)){

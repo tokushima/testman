@@ -15,7 +15,7 @@ class Finder{
 			foreach(new \RegexIterator(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($test_dir,
 					\FilesystemIterator::CURRENT_AS_FILEINFO|\FilesystemIterator::SKIP_DOTS|\FilesystemIterator::UNIX_PATHS
 			),\RecursiveIteratorIterator::SELF_FIRST),'/\.php$/') as $f){
-				if(!preg_match('/\/[\._]/',$f->getPathname()) && strpos($f->getPathname(),basename(__FILE__,'.php').'.') === false){
+				if(!preg_match('/\/[\._]/',$f->getPathname()) && strpos($f->getPathname(),\testman\Conf::settings_path('testman.')) === false){
 					$test_list[$f->getPathname()] = true;
 				}
 			}

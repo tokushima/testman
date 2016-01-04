@@ -67,13 +67,13 @@ class Runner{
 
 				if(null !== ($dir = \testman\Conf::has_settings('lib'))){
 					$dir = realpath($dir);
-						
+					
 					spl_autoload_register(function($class) use ($dir){
 						$cp = str_replace('\\','/',(($class[0] == '\\') ? substr($class,1) : $class));
 
 						if(strpos($cp,'test/') === 0 && is_file($f=($dir.'/'.substr($cp,5).'.php'))){
 							require_once($f);
-
+							
 							if(class_exists($class,false) || interface_exists($class,false) || trait_exists($class,false)){
 								return true;
 							}
