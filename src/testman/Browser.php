@@ -479,26 +479,10 @@ class Browser{
 	/**
 	 * bodyを解析し配列として返す
 	 * @param string $name
-	 * @param string $delimiter
 	 * @return mixed{}
 	 */
-	public function json($name=null,$delimiter='/'){
-		$array = json_decode($this->body(),true);
-			
-		if($array === false || $array === null){
-			throw new \testman\NotFoundException('Invalid data: '.': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
-		}
-		if(empty($name)){
-			return $array;
-		}
-		$names = explode($delimiter,$name);
-		foreach($names as $key){
-			if(is_array($array) && array_key_exists($key,$array)){
-				$array = $array[$key];
-			}else{
-				throw new \testman\NotFoundException($name.' not found: '.': '.substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : ''));
-			}
-		}
-		return $array;
+	public function json($name=null){
+		$json = new \testman\Json($this->body());
+		return $json->find($name);
 	}
 }

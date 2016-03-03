@@ -238,14 +238,7 @@
 		 * @return string
 		 */
 		value()
-		
-		/**
-		 * 値を追加する
-		 * ２つ目のパラメータがあるとアトリビュートの追加となる
-		 * @param mixed $arg
-		 */
-		add($arg)
-		
+				
 		/**
 		 * アトリビュートを取得する
 		 * @param string $n 取得するアトリビュート名
@@ -253,36 +246,6 @@
 		 * @return string
 		 */
 		in_attr($n,$d=null)
-		
-		/**
-		 * アトリビュートから削除する
-		 * パラメータが一つも無ければ全件削除
-		 */
-		rm_attr()
-		
-		/**
-		 * アトリビュートがあるか
-		 * @param string $name
-		 * @return boolean
-		 */
-		is_attr($name)
-		
-		/**
-		 * アトリビュートを設定
-		 * @return self $this
-		 */
-		attr($key,$value)
-		
-		/**
-		 * 値の無いアトリビュートを設定
-		 * @param string $v
-		 */
-		plain_attr($v)
-		
-		/**
-		 * XML文字列を返す
-		 */
-		get($encoding=null)
 		
 		/**
 		 * 検索する
@@ -301,21 +264,4 @@
 		 * @return \testman\Xml
 		 */
 		find_get($name,$offset=0)
-		
 	
-	\tesmtan\Xml::
-		/**
-		 * 匿名タグとしてインスタンス生成
-		 * @param string $value
-		 * @return \testman\Xml
-		 */
-		anonymous($value)
-		
-		/**
-		 * タグの検出
-		 * @param string $plain
-		 * @param string $name
-		 * @throws \testman\NotFoundException
-		 * @return \testman\Xml
-		 */
-		extract($plain,$name=null)
