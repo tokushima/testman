@@ -1,6 +1,6 @@
 <?php
 // coverage client
-if(php_sapi_name() !== 'cli'){
+if(isset($_SERVER) && array_key_exists('REQUEST_METHOD',$_SERVER) && !empty($_SERVER['REQUEST_METHOD'])){
 	$linkkey = \testman\Coverage::link();
 
 	if(isset($_POST[$linkkey]) || isset($_GET[$linkkey])){
