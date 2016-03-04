@@ -121,7 +121,7 @@ class Runner{
 
 				$msg = 'Running.. ('.($cnt.'/'.$testcnt).') '.(
 					(
-						(\testman\Conf::get('stdbs',true) === true) ?
+						(\testman\Conf::get('stdbs',true) === false) ?
 							\testman\Runner::short_name($test_path) :
 							self::trim_msg(\testman\Runner::short_name($test_path),80)
 					).' '
