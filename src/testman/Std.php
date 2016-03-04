@@ -51,12 +51,16 @@ class Std{
 	 * @param integer $num
 	 */
 	public static function bs($num=0){
-		if(empty($num)){
-			print("\033[2K");
+		if(\testman\Conf::get('stdbs',true) === false){
+			print(PHP_EOL);
 		}else{
-			self::cur(0,$num*-1);
-			print(str_repeat(' ',$num));
-			self::cur(0,$num*-1);
+			if(empty($num)){
+				print("\033[2K");
+			}else{
+				self::cur(0,$num*-1);
+				print(str_repeat(' ',$num));
+				self::cur(0,$num*-1);
+			}
 		}
 	}
 	/**

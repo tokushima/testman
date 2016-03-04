@@ -57,8 +57,8 @@ class Coverage{
 							),\RecursiveIteratorIterator::SELF_FIRST
 					) as $f){
 						if($f->isFile() &&
-								substr($f->getFilename(),-4) == '.php' &&
-								ctype_upper(substr($f->getFilename(),0,1))
+							substr($f->getFilename(),-4) == '.php' &&
+							ctype_upper(substr($f->getFilename(),0,1))
 						){
 							fwrite($fp,$f->getPathname().PHP_EOL);
 						}

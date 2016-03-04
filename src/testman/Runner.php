@@ -34,11 +34,6 @@ class Runner{
 		self::$start = true;
 			
 		try{
-			for($i=0;$i<5;$i++){
-				\testman\Std::println();
-			}
-			\testman\Std::cur(-5,0);
-
 			ini_set('display_errors','On');
 			ini_set('html_errors','Off');
 			ini_set('error_reporting',E_ALL);
@@ -66,143 +61,151 @@ class Runner{
 				throw new \ErrorException($s,0,$n,$f,$l);
 			});
 
-				if(null !== ($dir = \testman\Conf::has_settings('lib'))){
-					$dir = realpath($dir);
-					
-					spl_autoload_register(function($class) use ($dir){
-						$cp = str_replace('\\','/',(($class[0] == '\\') ? substr($class,1) : $class));
+			if(null !== ($dir = \testman\Conf::has_settings('lib'))){
+				$dir = realpath($dir);
+				
+				spl_autoload_register(function($class) use ($dir){
+					$cp = str_replace('\\','/',(($class[0] == '\\') ? substr($class,1) : $class));
 
-						if(strpos($cp,'test/') === 0 && is_file($f=($dir.'/'.substr($cp,5).'.php'))){
-							require_once($f);
-							
-							if(class_exists($class,false) || interface_exists($class,false) || trait_exists($class,false)){
-								return true;
-							}
-						}
-						return false;
-					},true,false);
-				}
-
-				if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
-					$msg = 'Setting '.$f;
-					\testman\Std::p($msg,'36');
-					include_once($f);
-					\testman\Std::bs(strlen($msg));
-				}
-				$testdir = realpath($testdir);
-				$success = $fail = $exception = $exe_time = $use_memory = 0;
-
-				$msg = 'Finding '.$testdir;
-				\testman\Std::p($msg,'36');
-				$test_list = \testman\Finder::get_list($testdir);
-				\testman\Std::bs(strlen($msg));
-
-				if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
-					$msg = 'Init: '.$f;
-					\testman\Std::p($msg,'36');
-					include_once($f);
-					\testman\Std::bs(strlen($msg));
-				}
-
-				$start_time = microtime(true);
-				$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
-				\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
-
-				$ey = $cnt = 0;
-				$testcnt = sizeof($test_list);
-				foreach($test_list as $test_path){
-					$cnt++;
-
-					$msg = 'Running.. ('.($cnt.'/'.$testcnt).') '.self::trim_msg(\testman\Runner::short_name($test_path),80).' ';
-					\testman\Std::p($msg,33);
-					list($test_name,$res) = \testman\Runner::exec($test_path);
-					\testman\Std::bs(strlen($msg));
+					if(strpos($cp,'test/') === 0 && is_file($f=($dir.'/'.substr($cp,5).'.php'))){
+						require_once($f);
 						
+						if(class_exists($class,false) || interface_exists($class,false) || trait_exists($class,false)){
+							return true;
+						}
+					}
+					return false;
+				},true,false);
+			}
+
+			// display
+			for($i=0;$i<5;$i++){
+				\testman\Std::println();
+			}
+			\testman\Std::cur(-5,0);
+			
+			if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
+				$msg = 'Setting '.$f;
+				\testman\Std::p($msg,'36');
+				include_once($f);
+				\testman\Std::bs(strlen($msg));
+			}
+			$testdir = realpath($testdir);
+			$success = $fail = $exception = $exe_time = $use_memory = 0;
+			
+			$msg = 'Finding '.$testdir;
+			\testman\Std::p($msg,'36');
+			$test_list = \testman\Finder::get_list($testdir);
+			\testman\Std::bs(strlen($msg));
+
+			if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
+				$msg = 'Init: '.$f;
+				\testman\Std::p($msg,'36');
+				include_once($f);
+				\testman\Std::bs(strlen($msg));
+			}
+
+			$start_time = microtime(true);
+			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
+			\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
+
+			$ey = $cnt = 0;
+			$testcnt = sizeof($test_list);
+			foreach($test_list as $test_path){
+				$cnt++;
+
+				$msg = 'Running.. ('.($cnt.'/'.$testcnt).') '.self::trim_msg(\testman\Runner::short_name($test_path),80).' ';
+				\testman\Std::p($msg,33);
+				list($test_name,$res) = \testman\Runner::exec($test_path);
+				\testman\Std::bs(strlen($msg));
+				
+				if(\testman\Conf::get('stdbs',true) === true){
 					if($res[0] != 1){
 						if($ey == 0){
 							$ey = 2;
-								
+							
 							$msg = 'Failure:';
 							\testman\Std::cur($ey,0);
 							\testman\Std::p($msg,31);
 							\testman\Std::cur($ey*-1,strlen($msg) * -1);
 						}
 						$ey++;
-
+	
 						$msg = '  '.self::trim_msg($test_name,80).':'.$res[3];
 						\testman\Std::cur($ey,0);
 						\testman\Std::p($msg.PHP_EOL.PHP_EOL.PHP_EOL,31);
 						\testman\Std::cur(($ey + 3) * -1,strlen($msg) * -1);
 					}
 				}
-				if($ey > 0){
-					for($a=0;$a<=$ey;$a++){
-						\testman\Std::cur(1,0);
-						\testman\Std::line_clear();
-					}
-					\testman\Std::cur($ey*-1,0);
+			}
+			if($ey > 0){
+				for($a=0;$a<=$ey;$a++){
+					\testman\Std::cur(1,0);
+					\testman\Std::line_clear();
 				}
-					
-				$exe_time = round((microtime(true) - (float)$start_time),4);
-				$use_memory = round(number_format((memory_get_usage() / 1024 / 1024),3),4) - $start_mem;
+				\testman\Std::cur($ey*-1,0);
+			}
+				
+			$exe_time = round((microtime(true) - (float)$start_time),4);
+			$use_memory = round(number_format((memory_get_usage() / 1024 / 1024),3),4) - $start_mem;
 
-				\testman\Std::println_warning('Results:');
+			\testman\Std::println_info(PHP_EOL.'Results:');
 
-				$tab = '   ';
-				foreach(self::$resultset as $testfile => $info){
-					switch($info[0]){
-						case 1:
-							$success++;
-							break;
-						case -1:
-							$fail++;
-							list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
+			$tab = '   ';
+			foreach(self::$resultset as $testfile => $info){
+				switch($info[0]){
+					case 1:
+						$success++;
+						break;
+					case -1:
+						$fail++;
+						list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
 
-							\testman\Std::println();
-							\testman\Std::println_primary(' '.$testfile);
-							\testman\Std::println_danger('  ['.$line.']: '.$msg);
+						\testman\Std::println();
+						\testman\Std::println_primary(' '.$testfile);
+						\testman\Std::println_danger('  ['.$line.']: '.$msg);
 
-							if($has){
-								$expectation = ' expect ';
-								\testman\Std::println_white($tab.str_repeat('-',(73-strlen($expectation))).$expectation.str_repeat('-',3));
-								ob_start();
-								var_dump($r1);
-								$diff1 = ob_get_clean();
-								\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff1));
-									
-								$result = ' result ';
-								\testman\Std::println_white($tab.str_repeat('-',(73-strlen($result))).$result.str_repeat('-',3));
-								ob_start();
-								var_dump($r2);
-								$diff2 = ob_get_clean();
-								\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff2));
-							}
-							break;
-						case -2:
-							$exception++;
-							list(,$time,$file,$line,$msg) = $info;
+						if($has){
+							$expectation = ' expect ';
+							\testman\Std::println_white($tab.str_repeat('-',(73-strlen($expectation))).$expectation.str_repeat('-',3));
+							ob_start();
+							var_dump($r1);
+							$diff1 = ob_get_clean();
+							\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff1));
 								
-							$msgarr = explode(PHP_EOL,$msg);
-							$summary = array_shift($msgarr);
-								
-							\testman\Std::println();
-							\testman\Std::println_primary(' '.$testfile);
-							\testman\Std::println_danger('  ['.$line.']: '.$summary);
-							\testman\Std::println($tab.implode(PHP_EOL.$tab,$msgarr));
-							break;
-					}
+							$result = ' result ';
+							\testman\Std::println_white($tab.str_repeat('-',(73-strlen($result))).$result.str_repeat('-',3));
+							ob_start();
+							var_dump($r2);
+							$diff2 = ob_get_clean();
+							\testman\Std::println($tab.str_replace(PHP_EOL,PHP_EOL.$tab,$diff2));
+						}
+						break;
+					case -2:
+						$exception++;
+						list(,$time,$file,$line,$msg) = $info;
+							
+						$msgarr = explode(PHP_EOL,$msg);
+						$summary = array_shift($msgarr);
+							
+						\testman\Std::println();
+						\testman\Std::println_primary(' '.$testfile);
+						\testman\Std::println_danger('  ['.$line.']: '.$summary);
+						\testman\Std::println($tab.implode(PHP_EOL.$tab,$msgarr));
+						break;
 				}
-				\testman\Std::println(str_repeat('=',80));
-				\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
-				\testman\Std::println();
+			}
+			\testman\Std::println(str_repeat('=',80));
+			\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
+			\testman\Std::println();
 
-				if(\testman\Conf::has('output')){
-					\testman\Std::println_primary('Written Result:   '.self::output(\testman\Conf::get('output')).' ');
-				}
-				if(\testman\Coverage::stop()){
-					\testman\Coverage::output(true);
-				}
-				\testman\Std::println();
+			if(\testman\Conf::has('output')){
+				\testman\Std::println_primary('Written Result:   '.self::output(\testman\Conf::get('output')).' ');
+			}
+			if(\testman\Coverage::stop()){
+				\testman\Coverage::output(true);
+			}
+			\testman\Std::println();
 		}catch(\Exception $e){
 			\testman\Std::println_danger(PHP_EOL.PHP_EOL.'Failure:'.PHP_EOL.PHP_EOL.$e->getMessage().PHP_EOL.$e->getTraceAsString());
 		}
