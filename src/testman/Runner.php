@@ -107,14 +107,25 @@ class Runner{
 
 			$start_time = microtime(true);
 			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
-			\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'));
+			if(\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'))){
+				$msg = 'Start Coverage: '.\testman\Conf::get('coverage');
+				\testman\Std::p($msg,'36');
+				usleep(700000);
+				\testman\Std::bs(strlen($msg));
+			}
 
 			$ey = $cnt = 0;
 			$testcnt = sizeof($test_list);
 			foreach($test_list as $test_path){
 				$cnt++;
 
-				$msg = 'Running.. ('.($cnt.'/'.$testcnt).') '.self::trim_msg(\testman\Runner::short_name($test_path),80).' ';
+				$msg = 'Running.. ('.($cnt.'/'.$testcnt).') '.(
+					(
+						(\testman\Conf::get('stdbs',true) === true) ?
+							\testman\Runner::short_name($test_path) :
+							self::trim_msg(\testman\Runner::short_name($test_path),80)
+					).' '
+				);
 				\testman\Std::p($msg,33);
 				list($test_name,$res) = \testman\Runner::exec($test_path);
 				\testman\Std::bs(strlen($msg));
