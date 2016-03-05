@@ -1,4 +1,13 @@
 <?php
+ini_set('display_errors','On');
+ini_set('html_errors','Off');
+ini_set('error_reporting',E_ALL);
+ini_set('xdebug.overload_var_dump',0);
+ini_set('xdebug.var_display_max_children',-1);
+ini_set('xdebug.var_display_max_data',-1);
+ini_set('xdebug.var_display_max_depth',-1);
+ini_set('memory_limit',-1);
+
 set_include_path(get_include_path()
 .PATH_SEPARATOR.__DIR__.'/lib'
 );

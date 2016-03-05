@@ -231,6 +231,7 @@ if(\testman\Args::opt('help')){
 	\testman\Std::println('  --info            Info setup[s]');
 	\testman\Std::println('  --setup           View setup[s] script');
 	\testman\Std::println('  --init            Create init files');
+	\testman\Std::println('  --nobs            Disabeld Std.bs(back space print)');
 	\testman\Std::println();
 }else if(($keyword = \testman\Args::opt('list',false)) !== false){
 	\testman\Finder::summary_list($testdir,$keyword);
@@ -297,6 +298,7 @@ _SRC_
 	}
 }else{
 	try{
+		\testman\Conf::set('stdbs',!\testman\Args::opt('nobs',false));		
 		\testman\Runner::start($testdir);
 	}catch(\Exception $e){
 		\testman\Std::println_danger(PHP_EOL.get_class($e).': '.$e->getMessage().PHP_EOL.PHP_EOL.$e->getTraceAsString());

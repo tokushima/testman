@@ -259,7 +259,12 @@ class Browser{
 
 		// set coverage query
 		if(\testman\Coverage::has_link($vars)){
-			$this->request_vars[\testman\Coverage::link()] = $vars;
+			foreach(\testman\Conf::get('urls',[]) as $u){
+				if(preg_match('/'.str_replace('%s','.+',preg_quote($u,'/')).'/',$url)){
+					$this->request_vars[\testman\Coverage::link()] = $vars;
+					break;
+				}
+			}
 		}
 		if(isset($url_info['query'])){
 			parse_str($url_info['query'],$vars);

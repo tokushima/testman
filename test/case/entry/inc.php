@@ -1,8 +1,7 @@
 <?php
 $b = b();
 
-$b->do_get(url('select','inc'));
+$b->do_post(url('select','inc'));
 eq(200,$b->status());
-eq('abcdef',$b->body());
-
+eq($b->json('a'),$b->json('b'));
 
