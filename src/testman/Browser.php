@@ -21,6 +21,9 @@ class Browser{
 	private $password;
 
 	private $raw;
+	
+	private static $recording_request = false;
+	private static $record_request = [];
 
 	public function __construct($agent=null,$timeout=30,$redirect_max=20){
 		$this->agent = $agent;
@@ -252,6 +255,25 @@ class Browser{
 		$this->body .= $data;
 		return strlen($data);
 	}
+	/**
+	 * 送信たリクエストの記録を開始する
+	 * @return string[]
+	 */
+	public static function start_record(){
+		self::$recording_request = true;
+		
+		$requests = self::$record_request;
+		self::$record_request = [];
+		return $requests;
+	}
+	/**
+	 * 送信したリクエストの記録を終了する
+	 * @return string[]
+	 */
+	public static function stop_record(){
+		self::$recording_request = false;
+		return self::$record_request;
+	}
 	private function request($method,$url,$download_path=null){
 		if(!isset($this->resource)) $this->resource = curl_init();
 		$url_info = parse_url($url);
@@ -322,7 +344,10 @@ class Browser{
 		curl_setopt($this->resource,CURLOPT_FORBID_REUSE,true);
 		curl_setopt($this->resource,CURLOPT_FAILONERROR,false);
 		curl_setopt($this->resource,CURLOPT_TIMEOUT,$this->timeout);
-
+		
+		if(self::$recording_request){
+			curl_setopt($this->resource,CURLINFO_HEADER_OUT,true);
+		}
 		if(!empty($this->user)){
 			curl_setopt($this->resource,CURLOPT_USERPWD,$this->user.':'.$this->password);
 		}
@@ -342,10 +367,10 @@ class Browser{
 		}
 		if(!isset($this->request_header['User-Agent'])){
 			curl_setopt($this->resource,CURLOPT_USERAGENT,
-					(empty($this->agent) ?
-							(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null) :
-							$this->agent
-					)
+				(empty($this->agent) ?
+					(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null) :
+					$this->agent
+				)
 			);
 		}
 		if(!isset($this->request_header['Accept']) && isset($_SERVER['HTTP_ACCEPT'])){
@@ -359,13 +384,13 @@ class Browser{
 		}
 
 		curl_setopt($this->resource,CURLOPT_HTTPHEADER,
-				array_map(
-						function($k,$v){
-							return $k.': '.$v;
-						}
-						,array_keys($this->request_header)
-						,$this->request_header
-		)
+			array_map(
+				function($k,$v){
+					return $k.': '.$v;
+				}
+				,array_keys($this->request_header)
+				,$this->request_header
+			)
 		);
 		curl_setopt($this->resource,CURLOPT_HEADERFUNCTION,[$this,'callback_head']);
 
@@ -378,7 +403,9 @@ class Browser{
 			$fp = fopen($download_path,'wb');
 				
 			curl_setopt($this->resource,CURLOPT_WRITEFUNCTION,function($resource,$data) use(&$fp){
-				if($fp) fwrite($fp,$data);
+				if($fp){
+					fwrite($fp,$data);
+				}
 				return strlen($data);
 			});
 		}
@@ -390,12 +417,18 @@ class Browser{
 			fclose($fp);
 		}
 		if(($err_code = curl_errno($this->resource)) > 0){
-			if($err_code == 47 || $err_code == 52) return $this;
+			if($err_code == 47 || $err_code == 52){
+				return $this;
+			}
 			throw new \RuntimeException($err_code.': '.curl_error($this->resource));
 		}
 		$this->url = curl_getinfo($this->resource,CURLINFO_EFFECTIVE_URL);
 		$this->status = curl_getinfo($this->resource,CURLINFO_HTTP_CODE);
 
+		if(self::$recording_request){
+			self::$record_request[] = curl_getinfo($this->resource,CURLINFO_HEADER_OUT);
+		}
+		
 		// remove coverage query
 		if(strpos($this->url,'?') !== false){
 			list($url,$query) = explode('?',$this->url,2);
