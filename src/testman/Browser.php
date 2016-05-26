@@ -20,12 +20,15 @@ class Browser{
 	private $cookie = [];
 	private $url;
 	private $status;
-
+	
 	private $user;
 	private $password;
-
+	
 	private $raw;
-
+	
+	private static $recording_request = false;
+	private static $record_request = [];
+	
 	public function __construct($agent=null,$timeout=30,$redirect_max=20){
 		$this->agent = $agent;
 		$this->timeout = (int)$timeout;
@@ -216,7 +219,7 @@ class Browser{
 	 * @return $this
 	 */
 	public function do_json($url){
-		$this->header('Content-type','application/json');
+		$this->header('Content-Type','application/json');
 		return $this->do_raw($url,json_encode($this->request_vars));
 	}
 	/**
@@ -266,6 +269,25 @@ class Browser{
 		$this->body .= $data;
 		return strlen($data);
 	}
+	/**
+	 * 送信たリクエストの記録を開始する
+	 * @return string[]
+	 */
+	public static function start_record(){
+		self::$recording_request = true;
+		
+		$requests = self::$record_request;
+		self::$record_request = [];
+		return $requests;
+	}
+	/**
+	 * 送信したリクエストの記録を終了する
+	 * @return string[]
+	 */
+	public static function stop_record(){
+		self::$recording_request = false;
+		return self::$record_request;
+	}
 	private function request($method,$url,$download_path=null){
 		if(!isset($this->resource)){
 			$this->resource = curl_init();
@@ -314,8 +336,11 @@ class Browser{
 					}
 					foreach(explode('&',http_build_query($this->request_file_vars)) as $q){
 						$s = explode('=',$q,2);
+						
 						if(isset($s[1])){
-							if(!is_file($f=urldecode($s[1]))) throw new \RuntimeException($f.' not found');
+							if(!is_file($f=urldecode($s[1]))){
+								throw new \RuntimeException($f.' not found');
+							}
 							$vars[urldecode($s[0])] = (class_exists('\\CURLFile',false)) ? new \CURLFile($f) : '@'.$f;
 						}
 					}
@@ -343,12 +368,16 @@ class Browser{
 		curl_setopt($this->resource,CURLOPT_FORBID_REUSE,true);
 		curl_setopt($this->resource,CURLOPT_FAILONERROR,false);
 		curl_setopt($this->resource,CURLOPT_TIMEOUT,$this->timeout);
-
+		
+		if(self::$recording_request){
+			curl_setopt($this->resource,CURLINFO_HEADER_OUT,true);
+		}
 		if(!empty($this->user)){
 			curl_setopt($this->resource,CURLOPT_USERPWD,$this->user.':'.$this->password);
 		}
 		if(!isset($this->request_header['Cookie'])){
 			$cookies = '';
+			
 			foreach($this->cookie as $domain => $cookie_value){
 				if(strpos($cookie_base_domain,$domain) === 0 || strpos($cookie_base_domain,(($domain[0] == '.') ? $domain : '.'.$domain)) !== false){
 					foreach($cookie_value as $k => $v){
@@ -360,10 +389,10 @@ class Browser{
 		}
 		if(!isset($this->request_header['User-Agent'])){
 			curl_setopt($this->resource,CURLOPT_USERAGENT,
-					(empty($this->agent) ?
-							(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null) :
-							$this->agent
-					)
+				(empty($this->agent) ?
+					(isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null) :
+					$this->agent
+				)
 			);
 		}
 		curl_setopt($this->resource,CURLOPT_HTTPHEADER,
@@ -376,7 +405,7 @@ class Browser{
 			)
 		);
 		curl_setopt($this->resource,CURLOPT_HEADERFUNCTION,[$this,'callback_head']);
-
+		
 		if(empty($download_path)){
 			curl_setopt($this->resource,CURLOPT_WRITEFUNCTION,[$this,'callback_body']);
 		}else{
@@ -384,26 +413,34 @@ class Browser{
 				mkdir(dirname($download_path),0777,true);
 			}
 			$fp = fopen($download_path,'wb');
-				
+			
 			curl_setopt($this->resource,CURLOPT_WRITEFUNCTION,function($resource,$data) use(&$fp){
-				if($fp) fwrite($fp,$data);
+				if($fp){
+					fwrite($fp,$data);
+				}
 				return strlen($data);
 			});
 		}
 		$this->request_header = $this->request_vars = [];
 		$this->head = $this->body = $this->raw = '';
 		curl_exec($this->resource);
-			
+		
 		if(!empty($download_path) && $fp){
 			fclose($fp);
 		}
 		if(($err_code = curl_errno($this->resource)) > 0){
-			if($err_code == 47 || $err_code == 52) return $this;
+			if($err_code == 47 || $err_code == 52){
+				return $this;
+			}
 			throw new \RuntimeException($err_code.': '.curl_error($this->resource));
 		}
 		$this->url = curl_getinfo($this->resource,CURLINFO_EFFECTIVE_URL);
 		$this->status = curl_getinfo($this->resource,CURLINFO_HTTP_CODE);
 
+		if(self::$recording_request){
+			self::$record_request[] = curl_getinfo($this->resource,CURLINFO_HEADER_OUT);
+		}
+		
 		// remove coverage query
 		if(strpos($this->url,'?') !== false){
 			list($url,$query) = explode('?',$this->url,2);
@@ -425,7 +462,7 @@ class Browser{
 				$cookie_domain = $cookie_base_domain;
 				$cookie_path = '/';
 				$secure = false;
-
+				
 				foreach(explode(';',$cookies) as $cookie){
 					$cookie = trim($cookie);
 					if(strpos($cookie,'=') !== false){
@@ -459,7 +496,7 @@ class Browser{
 		}
 		curl_close($this->resource);
 		unset($this->resource);
-
+		
 		if($this->redirect_count++ < $this->redirect_max){
 			switch($this->status){
 				case 300:
