@@ -78,8 +78,13 @@ class Runner{
 				},true,false);
 			}
 			
-			if(\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'))){
-				$msg = 'Start Coverage: '.realpath(\testman\Conf::get('coverage'));
+			$coverage = \testman\Conf::get('coverage');
+var_dump($coverage);			
+			if($coverage === ''){
+				$coverage = 'coverage.xml';
+			}
+			if(\testman\Coverage::start($coverage,\testman\Conf::get('coverage-dir'))){
+				$msg = 'Start Coverage: '.realpath($coverage);
 				\testman\Std::cur(-1,0);
 				\testman\Std::println($msg,'1;30');
 				\testman\Std::println();

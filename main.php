@@ -210,14 +210,15 @@ if(is_file($f=getcwd().'/bootstrap.php') || is_file($f=getcwd().'/vendor/autoloa
 		include_once($f);
 	ob_end_clean();
 }
-foreach(['coverage','output','coverage-dir'] as $k){
-	if(($v = \testman\Args::opt($k,null)) !== null && !is_bool($v)){
-		\testman\Conf::set($k,$v);
-	}
+
+if(\testman\Args::has_opt('coverage')){
+	$v = \testman\Args::opt('coverage');
+	\testman\Conf::set('coverage',(is_bool($v) ? 'coverage.xml' : $v));
 }
-\testman\Std::println('testman (PHP '.phpversion().')'); // version
-
-
+if(($v = \testman\Args::opt('output')) !== null && !is_bool($v)){
+	\testman\Conf::set('output',$v);
+}
+\testman\Std::println('testman (PHP '.phpversion().')');
 \testman\Std::println();
 
 if(\testman\Args::opt('help')){

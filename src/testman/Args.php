@@ -41,6 +41,14 @@ class Args{
 		return array_key_exists($name,self::$opt) ? self::$opt[$name][0] : $default;
 	}
 	/**
+	 * オプションが宣言されたか
+	 * @param string $name
+	 * @return boolean
+	 */
+	public static function has_opt($name){
+		return array_key_exists($name,self::$opt);		
+	}
+	/**
 	 * 引数の取得
 	 * @param string $default
 	 * @return string
