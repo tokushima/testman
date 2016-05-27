@@ -77,7 +77,14 @@ class Runner{
 					return false;
 				},true,false);
 			}
-
+			
+			if(\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'))){
+				$msg = 'Start Coverage: '.realpath(\testman\Conf::get('coverage'));
+				\testman\Std::cur(-1,0);
+				\testman\Std::println($msg,'1;30');
+				\testman\Std::println();
+			}
+			
 			// display
 			for($i=0;$i<5;$i++){
 				\testman\Std::println();
@@ -87,7 +94,7 @@ class Runner{
 			if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
 				$msg = 'Setting '.$f;
 				\testman\Std::p($msg,'36');
-				include_once($f);
+					include_once($f);
 				\testman\Std::bs(strlen($msg));
 			}
 			$testdir = realpath($testdir);
@@ -101,21 +108,15 @@ class Runner{
 			if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
 				$msg = 'Init: '.$f;
 				\testman\Std::p($msg,'36');
-				include_once($f);
+					include_once($f);
 				\testman\Std::bs(strlen($msg));
 			}
 
 			$start_time = microtime(true);
 			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
-			if(\testman\Coverage::start(\testman\Conf::get('coverage'),\testman\Conf::get('coverage-dir'))){
-				$msg = 'Start Coverage: '.\testman\Conf::get('coverage');
-				\testman\Std::p($msg,'36');
-				usleep(700000);
-				\testman\Std::bs(strlen($msg));
-			}
-
 			$ey = $cnt = 0;
 			$testcnt = sizeof($test_list);
+			
 			foreach($test_list as $test_path){
 				$cnt++;
 

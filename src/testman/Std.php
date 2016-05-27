@@ -83,7 +83,7 @@ class Std{
 	 * @param string $msg
 	 */
 	public static function println_primary($msg){
-		self::println($msg,'34');
+		self::println($msg,'1;34');
 	}
 	/**
 	 * Green

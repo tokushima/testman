@@ -178,10 +178,10 @@ class Coverage{
 				\testman\Std::println_danger($msg);
 			}
 		}
-		$covered_sum = ($total_covered == 0) ? 0 : ceil($total_covered/$total_lines*100);
+		$covered_sum = ($total_covered == 0) ? 0 : floor($total_covered/$total_lines*100);
 
 		\testman\Std::println(str_repeat('-',70));
-		\testman\Std::println_info(sprintf(' Covered %s%%',$covered_sum));
+		\testman\Std::println_info(sprintf(' Covered (%s/%s) %s%%',$total_covered,$total_lines,$covered_sum));
 			
 		if(isset($xml)){
 			$xml->addAttribute('create_date',date('Y/m/d H:i:s'));
@@ -200,7 +200,7 @@ class Coverage{
 			$dom->formatOutput = true;
 			$dom->save($save_path);
 
-			\testman\Std::println_primary(PHP_EOL.'Written Coverage: '.$save_path);
+			\testman\Std::println_primary(' Written Coverage: '.$save_path);
 		}
 	}
 
