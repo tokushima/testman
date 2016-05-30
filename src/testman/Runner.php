@@ -79,7 +79,7 @@ class Runner{
 			}
 			
 			$coverage = \testman\Conf::get('coverage');
-var_dump($coverage);			
+			
 			if($coverage === ''){
 				$coverage = 'coverage.xml';
 			}
