@@ -226,15 +226,15 @@ if(\testman\Args::opt('help')){
 	\testman\Std::println();
 	\testman\Std::println_primary('Options:');
 	\testman\Std::println('  --coverage <coverage file> Generate code coverage report in XML format');
-	\testman\Std::println('  --coverd <coverage file> View coverage report');
 	\testman\Std::println('  --output <file>   Log test execution in XML format to file');
-	\testman\Std::println('  --list [keyword]  List test files');
-	\testman\Std::println('  --info            Info setup[s]');
-	\testman\Std::println('  --setup           View setup[s] script');
-	\testman\Std::println('  --init            Create init files');
 	\testman\Std::println('  --nobs            Disabeld Std.bs(back space print)');
 	\testman\Std::println();
-}else if(($keyword = \testman\Args::opt('list',false)) !== false){
+	\testman\Std::println('  --list [keyword]  List test files');
+	\testman\Std::println('  --info            Info setup[s]');
+	\testman\Std::println('  --init            Create init files');
+	\testman\Std::println('  --coverd <coverage file> View coverage report');
+	\testman\Std::println();
+}else if(($keyword = \testman\Args::opt('list',false)) !== false || ($keyword = \testman\Args::opt('l',false)) !== false){
 	\testman\Finder::summary_list($testdir,$keyword);
 }else if((\testman\Args::opt('init',false)) !== false){
 	$newfile = function($file,$source){
@@ -271,7 +271,7 @@ _SRC_
 	if(!is_dir($dir=\testman\Conf::settings_path('testman.lib'))){
 		mkdir($dir,0755,true);
 		\testman\Std::println_info('Create '.$dir);
-			
+		
 		$newfile('testman.lib/Util.php',<<< '_SRC_'
 namespace test; // namespaceはtestから始まる
 
@@ -280,10 +280,16 @@ class Util{
 _SRC_
 		);
 	}
-}else if(($p=\testman\Args::opt('info',false)) !== false){
-	\testman\Finder::setup_info($p,false);
-}else if(($p=\testman\Args::opt('setup',false)) !== false){
-	\testman\Finder::setup_info($p,true);
+}else if(($p=\testman\Args::opt('info',false)) !== false || ($p=\testman\Args::opt('i',false)) !== false){
+	if($p === true){
+		$p = is_dir(getcwd().'/test') ? getcwd().'/test' : getcwd();
+	}
+	\testman\Finder::setup_info($p);
+}else if(($p=\testman\Args::opt('copy',false)) !== false){
+	if($p === true){
+		throw new \InvalidArgumentException('target directory required');
+	}
+	// TODO
 }else if(($covered_file = \testman\Args::opt('covered',false)) !== false){
 	try{
 		$create_date = \testman\Coverage::load($covered_file);

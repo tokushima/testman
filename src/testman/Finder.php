@@ -73,10 +73,10 @@ class Finder{
 	/**
 	 * setupの説明
 	 * @param string $testdir
-	 * @param boolean $source
 	 */
-	public static function setup_info($dir,$source=false){
+	public static function setup_info($dir){
 		$dir = realpath($dir);
+		
 		if($dir === false){
 			throw new \InvalidArgumentException($dir.' not found');
 		}
@@ -95,12 +95,28 @@ class Finder{
 				$tlen = strlen($type['type']);
 			}
 		}
-		\testman\Std::println_warning('Dir:');
-		\testman\Std::println('  '.\testman\Runner::short_name($target_dir));
-		\testman\Std::println();
-			
+		if(is_file($dir)){
+			\testman\Std::println_warning('File:');
+			\testman\Std::println('  '.\testman\Runner::short_name($dir));
+			\testman\Std::println();
+		}else{
+			\testman\Std::println_warning('Dir:');
+			\testman\Std::println('  '.\testman\Runner::short_name($target_dir));
+			\testman\Std::println();
+		}
 		\testman\Std::println_warning('Summary:');
 		\testman\Std::println('  '.implode(' > ',$summary_list));
+		
+		if(is_file($dir)){
+			if(preg_match('/\/\*.+?\*\//s',file_get_contents($dir),$_m)){
+				$desc = preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(['/'.'**','*'.'/'],'',$_m[0]));
+			}
+			\testman\Std::println_info('  '.str_repeat('-', 40));
+			foreach(explode(PHP_EOL,trim($desc)) as $line){
+				\testman\Std::println_info('   '.$line);
+			}
+			\testman\Std::println_info('  '.str_repeat('-', 40));
+		}
 		\testman\Std::println();
 			
 		ksort($var_types);
@@ -108,26 +124,6 @@ class Finder{
 		\testman\Std::println_warning('Vars:');
 		foreach($var_types as $name => $type){
 			\testman\Std::println('  '.str_pad($type['type'],$tlen).' $'.str_pad($name,$nlen).' : '.$type['desc']);
-		}
-		\testman\Std::println();
-			
-		if($source){
-			\testman\Std::println_warning('Source:');
-			\testman\Std::println();
-
-			foreach($inc_list as $inc){
-				\testman\Std::println_white('// '.str_repeat('-', 77));
-				\testman\Std::println_white('// path:    '.$inc['path']);
-				\testman\Std::println_white('// summary: '.$inc['summary']);
-				\testman\Std::println_white('// '.str_repeat('-', 77));
-					
-				$src = file_get_contents($inc['path']);
-				$src = trim(preg_replace('/^[\s]*<\?php/','',$src));
-				$src = preg_replace('/\/\*.+?\*\//s','',$src);
-					
-				\testman\Std::println_info($src);
-				\testman\Std::println();
-			}
 		}
 		\testman\Std::println();
 	}
