@@ -285,11 +285,6 @@ _SRC_
 		$p = is_dir(getcwd().'/test') ? getcwd().'/test' : getcwd();
 	}
 	\testman\Finder::setup_info($p);
-}else if(($p=\testman\Args::opt('copy',false)) !== false){
-	if($p === true){
-		throw new \InvalidArgumentException('target directory required');
-	}
-	// TODO
 }else if(($covered_file = \testman\Args::opt('covered',false)) !== false){
 	try{
 		$create_date = \testman\Coverage::load($covered_file);
