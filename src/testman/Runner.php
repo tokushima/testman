@@ -61,15 +61,28 @@ class Runner{
 				throw new \ErrorException($s,0,$n,$f,$l);
 			});
 
+			for($i=0;$i<5;$i++){
+				\testman\Std::println();
+			}
+			\testman\Std::cur(-5,0);
+						
+			$is_head_print = false;
+			if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
+				$msg = 'Settings: '.$f;
+				\testman\Std::println($msg,'36');
+					include_once($f);
+				$is_head_print = true;
+			}
+			
 			if(null !== ($dir = \testman\Conf::has_settings('lib'))){
 				$dir = realpath($dir);
-				
+			
 				spl_autoload_register(function($class) use ($dir){
 					$cp = str_replace('\\','/',(($class[0] == '\\') ? substr($class,1) : $class));
-
+			
 					if(strpos($cp,'test/') === 0 && is_file($f=($dir.'/'.substr($cp,5).'.php'))){
 						require_once($f);
-						
+			
 						if(class_exists($class,false) || interface_exists($class,false) || trait_exists($class,false)){
 							return true;
 						}
@@ -77,31 +90,26 @@ class Runner{
 					return false;
 				},true,false);
 			}
-			
+				
 			$coverage = \testman\Conf::get('coverage');
+				
+			if(isset($coverage)){
+				if(empty($coverage)){
+					$coverage = 'coverage.xml';
+				}
+				$coverage_taget_dir = \testman\Conf::get('coverage-dir',getcwd().'/lib');
+				$coverage_taget_dir_real = realpath($coverage_taget_dir);
 			
-			if($coverage === ''){
-				$coverage = 'coverage.xml';
-			}
-			if(\testman\Coverage::start($coverage,\testman\Conf::get('coverage-dir'))){
-				$msg = 'Start Coverage: '.realpath($coverage);
-				\testman\Std::cur(-1,0);
-				\testman\Std::println($msg,'1;30');
-				\testman\Std::println();
-			}
+				if($coverage_taget_dir_real === false){
+					throw new \testman\NotFoundException('Coverage target not found: '.$coverage_taget_dir);
+				}
+				if(\testman\Coverage::start($coverage,$coverage_taget_dir)){
+					$msg = 'Coverage: '.$coverage_taget_dir_real;
+					\testman\Std::println($msg,'36');
+					$is_head_print = true;
+				}
+			}			
 			
-			// display
-			for($i=0;$i<5;$i++){
-				\testman\Std::println();
-			}
-			\testman\Std::cur(-5,0);
-			
-			if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
-				$msg = 'Setting '.$f;
-				\testman\Std::p($msg,'36');
-					include_once($f);
-				\testman\Std::bs(strlen($msg));
-			}
 			$testdir = realpath($testdir);
 			$success = $fail = $exception = $exe_time = $use_memory = 0;
 			
@@ -111,12 +119,16 @@ class Runner{
 			\testman\Std::bs(strlen($msg));
 
 			if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
-				$msg = 'Init: '.$f;
-				\testman\Std::p($msg,'36');
+				$msg = 'Fixture: '.$f;
+				\testman\Std::println($msg,'36');
 					include_once($f);
-				\testman\Std::bs(strlen($msg));
+				$is_head_print = true;
 			}
-
+			
+			if($is_head_print){
+				\testman\Std::println();
+			}
+			
 			$start_time = microtime(true);
 			$start_mem = round(number_format((memory_get_usage() / 1024 / 1024),3),4);
 			$ey = $cnt = 0;

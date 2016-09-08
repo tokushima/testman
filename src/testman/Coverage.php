@@ -30,7 +30,7 @@ class Coverage{
 	 * @param string $output_xml 書き出し先
 	 * @throws \RuntimeException
 	 */
-	public static function start($output_xml,$target_dir=null){
+	public static function start($output_xml,$target_dir){
 		if(!empty($output_xml)){
 			if(extension_loaded('xdebug')){
 				if(!is_dir($d = dirname($output_xml))){
@@ -43,10 +43,7 @@ class Coverage{
 				$tmp_db = self::$db.'.tmp';
 				file_put_contents($target_list_db,'');
 				file_put_contents($tmp_db,'');
-					
-				if(empty($target_dir)){
-					$target_dir = getcwd().'/lib';
-				}
+				
 				if(!empty($target_dir) && is_dir($target_dir)){
 					$fp = fopen($target_list_db,'w');
 
@@ -160,13 +157,15 @@ class Coverage{
 			$total_covered += $covered;
 
 			if(isset($xml)){
-				$f = $xml->addChild('file');
-				$f->addAttribute('name',str_replace(getcwd().DIRECTORY_SEPARATOR,'',$filename));
-				$f->addAttribute('covered',$covered);
-				$f->addAttribute('modify_date',date('Y/m/d H:i:s',filemtime($filename)));
-				$f->addChild('covered_lines',implode(',',$resultset['covered_line']));
-				$f->addChild('uncovered_lines',implode(',',$resultset['uncovered_line']));
-				$f->addAttribute('test',($resultset['test'] == 1) ? 'true' : 'false');
+				if(is_file($filename)){
+					$f = $xml->addChild('file');
+					$f->addAttribute('name',str_replace(getcwd().DIRECTORY_SEPARATOR,'',$filename));
+					$f->addAttribute('covered',$covered);
+					$f->addAttribute('modify_date',date('Y/m/d H:i:s',filemtime($filename)));
+					$f->addChild('covered_lines',implode(',',$resultset['covered_line']));
+					$f->addChild('uncovered_lines',implode(',',$resultset['uncovered_line']));
+					$f->addAttribute('test',($resultset['test'] == 1) ? 'true' : 'false');
+				}
 			}
 
 			$msg = sprintf(' %3d%% %s',$covered,$filename);
