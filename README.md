@@ -1,16 +1,18 @@
-#testman
+# testman
 
 (PHP 5 >= 5.5.0)
 
-#Download
-	$ mkdir test
-	$ curl -Lo test/testman.phar http://git.io/testman.phar
+![ebi](teacher_saiten_man.png)
 
-#Quick test
+[![download](button_download2.png)](https://git.io/testman.phar)
+
+
+## Quick test
 
 	$ php test/testman.phar <path>
 
-#Options
+
+## Options
 \--coverage <file>
 
 	Generate code coverage report in XML format.
@@ -26,10 +28,6 @@
 \--info
 
 	Info setup[s].
-	
-\--setup
-
-	View setup[s] script
 
 \--init
 
@@ -37,9 +35,9 @@
 
 
 
-#Config script file
+## Config script file
 
-##test/testman.settings.php
+### test/testman.settings.php
 
 	[sample]
 		<?php
@@ -47,14 +45,14 @@
 			\testman\Conf::set('output',dirname(__DIR__).'/work/result.xml');
 			\testman\Conf::set('ssl-verify',false);
 
-#Fixture of the test
+## Fixture of the test
 	##test/testman.fixture.php
 	
 	[sample]
 	<?php
 	\ebi\Dt::setup();
 
-#Class Library of the test
+## Class Library of the test
 	##test/testman.lib/Abc.php
 	
 	namespace is `test` only
@@ -65,7 +63,7 @@
 			class Abc{
 			}
 
-#Function
+## Function
 
 	/**
 	 * 失敗とする
@@ -118,12 +116,12 @@
 	 */
 	b()
 
-#Special script file
+## Special script file
 	__setup__.php
 	__teardown__.php
 
 
-#Util
+## Util
 
 	\testman\Browser::
 		/**
