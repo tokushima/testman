@@ -332,6 +332,47 @@ class Runner{
 
 		return realpath($output);
 	}
+	private static function vars_type_validation($type,$name,$var){
+		$is_a = false;
+		if(substr($type,-2) == '[]'){
+			$is_a = true;
+			$type = substr($type,0,-2);
+		}
+		if($is_a && !is_array($var)){
+			throw new \testman\DefinedVarsInvalidTypeException('expects '.$name.' to be array');
+		}
+		foreach((($is_a) ? $var : [$var]) as $v){
+			switch($type){
+				case 'string':
+					if(!is_string($v)){
+						throw new \testman\DefinedVarsInvalidTypeException($name.' must be an '.$type);
+					}
+					break;
+				case 'integer':
+					if(!is_int($v)){
+						throw new \testman\DefinedVarsInvalidTypeException($name.' must be an '.$type);
+					}
+					break;
+				case 'float':
+					if(!is_float($v)){
+						throw new \testman\DefinedVarsInvalidTypeException($name.' must be an '.$type);
+					}
+					break;
+				case 'boolean':
+					if(!is_bool($v)){
+						throw new \testman\DefinedVarsInvalidTypeException($name.' must be an '.$type);
+					}
+					break;
+				default:
+					if(!is_object($v)){
+						throw new \testman\DefinedVarsInvalidTypeException($name.' must be an '.$type);
+					}
+					if(!($v instanceof $type)){
+						throw new \testman\DefinedVarsInvalidTypeException($name.'('.get_class($v).') must be an '.$type);
+					}
+			}
+		}
+	}
 	private static function exec_include($_is_setup,$_inc,$_var_types){
 		extract(self::$vars);
 		include($_inc['path']);
@@ -345,35 +386,7 @@ class Runner{
 				if(!isset($_getvars[$k])){
 					throw new \testman\DefinedVarsRequireException($k.' required');
 				}
-				switch($type){
-					case 'string':
-						if(!is_string($_getvars[$k])){
-							throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
-						}
-						break;
-					case 'integer':
-						if(!is_int($_getvars[$k])){
-							throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
-						}
-						break;
-					case 'float':
-						if(!is_float($_getvars[$k])){
-							throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
-						}
-						break;
-					case 'boolean':
-						if(!is_bool($_getvars[$k])){
-							throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
-						}
-						break;
-					default:
-						if(!is_object($_getvars[$k])){
-							throw new \testman\DefinedVarsInvalidTypeException($k.' must be an '.$type);
-						}
-						if(!($_getvars[$k] instanceof $type)){
-							throw new \testman\DefinedVarsInvalidTypeException($k.'('.get_class($_getvars[$k]).') must be an '.$type);
-						}
-				}
+				self::vars_type_validation($type,$k,$_getvars[$k]);
 				self::$vars[$k] = $_getvars[$k];
 			}
 		}
