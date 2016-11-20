@@ -123,7 +123,7 @@
 
 ## Util
 
-	\testman\Browser::
+### \testman\Browser
 		/**
 		 * リクエスト時のクエリ
 		 * @param string $key
@@ -149,7 +149,7 @@
 		 * @return string
 		 */
 		body()
-
+		
 		/**
 		 * bodyを解析しXMLオブジェクトとして返す
 		 * @param string $name node名
@@ -228,7 +228,7 @@
 		do_post_download($url,$download_path)
 
 
-	\testman\Xml->
+### \testman\Xml
 		/**
 		 * 値を設定、取得する
 		 * @param mixed
@@ -262,4 +262,4 @@
 		 * @return \testman\Xml
 		 */
 		find_get($name,$offset=0)
-	
+		
