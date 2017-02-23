@@ -144,6 +144,13 @@ class Browser{
 		return $this->head;
 	}
 	/**
+	 * クッキーを取得
+	 * @return mixed{}
+	 */
+	public function cookie(){
+		return $this->cookie;
+	}
+	/**
 	 * 結果の本文を取得
 	 * @return string
 	 */
@@ -384,7 +391,9 @@ class Browser{
 			foreach($this->cookie as $domain => $cookie_value){
 				if(strpos($cookie_base_domain,$domain) === 0 || strpos($cookie_base_domain,(($domain[0] == '.') ? $domain : '.'.$domain)) !== false){
 					foreach($cookie_value as $k => $v){
-						if(!$v['secure'] || ($v['secure'] && substr($url,0,8) == 'https://')) $cookies .= sprintf('%s=%s; ',$k,$v['value']);
+						if(!$v['secure'] || ($v['secure'] && substr($url,0,8) == 'https://')){
+							$cookies .= sprintf('%s=%s; ',$k,$v['value']);
+						}
 					}
 				}
 			}
@@ -439,6 +448,7 @@ class Browser{
 		}
 		$this->url = curl_getinfo($this->resource,CURLINFO_EFFECTIVE_URL);
 		$this->status = curl_getinfo($this->resource,CURLINFO_HTTP_CODE);
+//		$this->cookie = curl_getinfo($this->resource,CURLINFO_COOKIELIST);
 
 		if(self::$recording_request){
 			self::$record_request[] = curl_getinfo($this->resource,CURLINFO_HEADER_OUT);
