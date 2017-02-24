@@ -385,13 +385,16 @@ class Browser{
 		if(!isset($this->request_header['Expect'])){
 			$this->request_header['Expect'] = null;
 		}
-		if(!isset($this->request_header['Cookie'])){
+		if(!empty($this->cookie)){
 			$cookies = '';
+			$now = time();
 			
-			foreach($this->cookie as $domain => $cookie_value){
+			foreach($this->cookie as $domain => $cookieval){
 				if(strpos($cookie_base_domain,$domain) === 0 || strpos($cookie_base_domain,(($domain[0] == '.') ? $domain : '.'.$domain)) !== false){
-					foreach($cookie_value as $k => $v){
-						if(!$v['secure'] || ($v['secure'] && substr($url,0,8) == 'https://')){
+					foreach($cookieval as $k => $v){
+						if(!empty($v['expires']) && $v['expires'] < $now){
+							unset($this->cookie[$domain][$k]);
+						}else if(!$v['secure'] || ($v['secure'] && substr($url,0,8) == 'https://')){
 							$cookies .= sprintf('%s=%s; ',$k,$v['value']);
 						}
 					}
@@ -448,7 +451,6 @@ class Browser{
 		}
 		$this->url = curl_getinfo($this->resource,CURLINFO_EFFECTIVE_URL);
 		$this->status = curl_getinfo($this->resource,CURLINFO_HTTP_CODE);
-//		$this->cookie = curl_getinfo($this->resource,CURLINFO_COOKIELIST);
 
 		if(self::$recording_request){
 			self::$record_request[] = curl_getinfo($this->resource,CURLINFO_HEADER_OUT);
@@ -482,6 +484,7 @@ class Browser{
 						list($k,$v) = explode('=',$cookie,2);
 						$k = trim($k);
 						$v = trim($v);
+						
 						switch(strtolower($k)){
 							case 'expires': $cookie_expires = ctype_digit($v) ? (int)$v : strtotime($v); break;
 							case 'domain': $cookie_domain = preg_replace('/^[\w]+:\/\/(.+)$/','\\1',$v); break;
