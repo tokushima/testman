@@ -16,3 +16,4 @@ $xml = new \testman\Xml('abc','ABCDEFG');
 eq('ABCDEFG',$xml);
 
 
+eq(true);

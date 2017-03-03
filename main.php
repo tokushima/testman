@@ -67,7 +67,11 @@ if(!function_exists('eq')){
 	 * @param mixed $result 実行結果
 	 * @param string $msg 失敗時メッセージ
 	 */
-	function eq($expectation,$result,$msg='failure equals'){
+	function eq($expectation,$result=null,$msg='failure equals'){
+		if(func_num_args() == 1){
+			$result = $expectation;
+			$expectation = true;
+		}
 		if(($result instanceof \testman\Xml) && !($expectation instanceof \testman\Xml)){
 			$result = $result->value();
 		}

@@ -84,6 +84,7 @@ class Browser{
 		$this->request_header[$key] = $value;
 		return $this;
 	}
+	
 	/**
 	 * クエリを設定
 	 * @param string $key
@@ -136,18 +137,19 @@ class Browser{
 		curl_setopt($this->resource,$key,$value);
 		return $this;
 	}
+	
 	/**
 	 * 結果のヘッダを取得
 	 * @return string
 	 */
-	public function head(){
+	public function response_headers(){
 		return $this->head;
 	}
 	/**
 	 * クッキーを取得
 	 * @return mixed{}
 	 */
-	public function cookie(){
+	public function cookies(){
 		return $this->cookie;
 	}
 	/**
@@ -262,7 +264,7 @@ class Browser{
 	 * @param string $data
 	 * @return number
 	 */
-	public function callback_head($resource,$data){
+	private function callback_head($resource,$data){
 		$this->head .= $data;
 		return strlen($data);
 	}
@@ -272,7 +274,7 @@ class Browser{
 	 * @param string $data
 	 * @return number
 	 */
-	public function callback_body($resource,$data){
+	private function callback_body($resource,$data){
 		$this->body .= $data;
 		return strlen($data);
 	}
@@ -471,6 +473,7 @@ class Browser{
 			}
 			$this->url = $url;
 		}
+		
 		if(preg_match_all('/Set-Cookie:[\s]*(.+)/i',$this->head,$match)){
 			foreach($match[1] as $cookies){
 				$cookie_name = $cookie_value = $cookie_domain = $cookie_path = $cookie_expires = null;
