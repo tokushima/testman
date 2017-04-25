@@ -1,11 +1,6 @@
 # testman
 
-(PHP 5 >= 5.5.0)
-
-![ebi](teacher_saiten_man.png)
-
-[![download](button_download2.png)](https://git.io/testman.phar)
-
+(PHP 7)
 
 ## Quick test
 
