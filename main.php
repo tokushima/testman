@@ -286,7 +286,11 @@ _SRC_
 	}
 }else if(($p=\testman\Args::opt('info',false)) !== false || ($p=\testman\Args::opt('i',false)) !== false){
 	if($p === true){
-		$p = is_dir(getcwd().'/test') ? getcwd().'/test' : getcwd();
+		$p = \testman\Args::value();
+		
+		if(empty($p)){
+			$p = is_dir(getcwd().'/test') ? getcwd().'/test' : getcwd();
+		}
 	}
 	\testman\Finder::setup_info($p);
 }else if(($covered_file = \testman\Args::opt('covered',false)) !== false){

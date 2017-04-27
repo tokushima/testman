@@ -108,6 +108,7 @@ class Finder{
 		\testman\Std::println('  '.implode(' > ',$summary_list));
 		
 		if(is_file($dir)){
+			$desc = '';
 			if(preg_match('/\/\*.+?\*\//s',file_get_contents($dir),$_m)){
 				$desc = preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(['/'.'**','*'.'/'],'',$_m[0]));
 			}
