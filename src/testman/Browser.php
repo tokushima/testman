@@ -451,6 +451,8 @@ class Browser{
 		}
 		$this->request_header = $this->request_vars = [];
 		$this->head = $this->body = $this->raw = '';
+		$this->bearer_token = $this->user = null;
+		
 		curl_exec($this->resource);
 		
 		if(!empty($download_path) && $fp){
