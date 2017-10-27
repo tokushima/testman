@@ -230,6 +230,7 @@ if(\testman\Args::opt('help')){
 	\testman\Std::println();
 	\testman\Std::println_primary('Options:');
 	\testman\Std::println('  --coverage <coverage file> Generate code coverage report in XML format');
+	\testman\Std::println('  --benchmark <benchmark file> Generate benchmark report');
 	\testman\Std::println('  --output <file>   Log test execution in XML format to file');
 	\testman\Std::println('  --nobs            Disabeld Std.bs(back space print)');
 	\testman\Std::println();
@@ -310,6 +311,27 @@ _SRC_
 	try{
 		\testman\Conf::set('stdbs',!\testman\Args::opt('nobs',false));		
 		\testman\Runner::start($testdir);
+
+		if(\testman\Args::has_opt('benchmark')){
+			$pathname = \testman\Args::opt('benchmark');
+			
+			if(!empty($pathname)){
+				if(!is_dir(basename($pathname))){
+					if(!mkdir(basename($pathname))){
+						throw new \InvalidArgumentException('Creation of benchmark file failed');
+					}
+				}
+				if(!is_file($pathname)){
+					if(!file_put_contents($pathname,sprintf("%s\t%s\t%s\t%s".PHP_EOL,'Path','Time','Mem','Peak Mem'))){
+						throw new \InvalidArgumentException('Creation of benchmark file failed');
+					}
+				}
+				foreach(\testman\Runner::benchmark() as $name => $values){
+					$line = implode("\t",array_merge([$name],$values));
+					file_put_contents($pathname,$line.PHP_EOL,FILE_APPEND);
+				}
+			}
+		}
 	}catch(\Exception $e){
 		\testman\Std::println_danger(PHP_EOL.get_class($e).': '.$e->getMessage().PHP_EOL.PHP_EOL.$e->getTraceAsString());
 	}

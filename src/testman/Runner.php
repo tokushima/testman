@@ -2,16 +2,21 @@
 namespace testman;
 
 class Runner{
-	static private $resultset = [];
-	static private $current_test;
-	static private $start = false;
-	static private $vars = [];
+	private static $resultset = [];
+	private static $current_test;
+	private static $start = false;
+	private static $vars = [];
+	private static $benchmark_base = [];
+	private static $benchmark = [];
 
 	/**
 	 * 現在実行しているテスト
 	*/
 	public static function current(){
 		return self::$current_test;
+	}
+	public static function benchmark(){
+		return self::$benchmark;
 	}
 
 	private static function trim_msg($msg,$len){
@@ -404,7 +409,11 @@ class Runner{
 	private static function exec($test_file){
 		self::$vars = [];
 		self::$current_test = $test_file;
-			
+		self::$benchmark_base = [
+			'm'=>memory_get_usage(),
+			't'=>microtime(true),
+		];
+	
 		try{
 			ob_start();
 			self::exec_setup_teardown($test_file,true);
@@ -444,6 +453,12 @@ class Runner{
 		}
 		$test_name = self::short_name($test_file);
 		self::exec_setup_teardown($test_file,false);
+		
+		self::$benchmark[$test_name] = [
+			'time'=>round((microtime(true) - (float)self::$benchmark_base['t']),4),
+			'memory'=>ceil(memory_get_usage() - self::$benchmark_base['m']),
+			'memory_peak'=>ceil(memory_get_peak_usage()),
+		];
 		self::$resultset[$test_name] = $res;
 		return [$test_name,$res];
 	}
