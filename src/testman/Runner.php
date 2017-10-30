@@ -454,9 +454,13 @@ class Runner{
 		$test_name = self::short_name($test_file);
 		self::exec_setup_teardown($test_file,false);
 		
+		$memory_get_usage = memory_get_usage();
+		if(0 > ($memory_get_usage - self::$benchmark_base['m'])){
+			$memory_get_usage = self::$benchmark_base['m'];
+		}
 		self::$benchmark[$test_name] = [
 			'time'=>round((microtime(true) - (float)self::$benchmark_base['t']),4),
-			'memory'=>ceil(memory_get_usage() - self::$benchmark_base['m']),
+			'memory'=>ceil($memory_get_usage),
 			'memory_peak'=>ceil(memory_get_peak_usage()),
 		];
 		self::$resultset[$test_name] = $res;
