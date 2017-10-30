@@ -149,10 +149,7 @@ if(!function_exists('url')){
 		$args = func_get_args();
 		array_shift($args);
 		$urls = \testman\Conf::get('urls',[]);
-
-		if(empty($ruls) && class_exists('\ebi\Dt')){
-			$urls = \ebi\Dt::get_urls();
-		}
+		
 		if(empty($urls) || !is_array($urls)){
 			throw new \testman\NotFoundException('urls empty');
 		}
