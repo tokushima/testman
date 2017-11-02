@@ -308,33 +308,6 @@ _SRC_
 	try{
 		\testman\Conf::set('stdbs',!\testman\Args::opt('nobs',false));
 		\testman\Runner::start($testdir);
-
-		$save_path = null;
-		
-		if(\testman\Args::has_opt('benchmark')){
-			$save_path = \testman\Args::opt('benchmark');
-		}
-		if(empty($save_path)){
-			$save_path = \testman\Conf::get('benchmark');
-		}
-		if(!empty($save_path)){
-			if(!is_dir(basename($save_path))){
-				if(!mkdir(basename($save_path))){
-					throw new \InvalidArgumentException('Creation of benchmark file failed');
-				}
-			}
-			if(is_file($save_path)){
-				unlink($save_path);
-			}
-			if(!file_put_contents($save_path,sprintf("%s\t%s\t%s\t%s".PHP_EOL,'Path','Time','Mem','Peak Mem'))){
-				throw new \InvalidArgumentException('Creation of benchmark file failed');
-			}
-			foreach(\testman\Runner::benchmark() as $name => $values){
-				$line = implode("\t",array_merge([$name],$values));
-				file_put_contents($save_path,$line.PHP_EOL,FILE_APPEND);
-			}
-			\testman\Std::println_primary(' Written Benchmark: '.$save_path);
-		}
 	}catch(\Exception $e){
 		\testman\Std::println_danger(PHP_EOL.get_class($e).': '.$e->getMessage().PHP_EOL.PHP_EOL.$e->getTraceAsString());
 	}

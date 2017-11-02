@@ -6,7 +6,6 @@ class Runner{
 	private static $current_test;
 	private static $start = false;
 	private static $vars = [];
-	private static $benchmark_base = [];
 	private static $benchmark = [];
 
 	/**
@@ -113,7 +112,8 @@ class Runner{
 					\testman\Std::println($msg,'36');
 					$is_head_print = true;
 				}
-			}			
+			}
+			\testman\Benchmark::init();
 			
 			$testdir = realpath($testdir);
 			$success = $fail = $exception = $exe_time = $use_memory = 0;
@@ -240,6 +240,11 @@ class Runner{
 				\testman\Coverage::output(true);
 			}
 			\testman\Std::println();
+			
+			if(!empty(\testman\Benchmark::is_running())){
+				\testman\Benchmark::write();
+				\testman\Std::println_primary(' Written Benchmark: '.\testman\Benchmark::save_path());
+			}
 		}catch(\Exception $e){
 			\testman\Std::println_danger(PHP_EOL.PHP_EOL.'Failure:'.PHP_EOL.PHP_EOL.$e->getMessage().PHP_EOL.$e->getTraceAsString());
 		}
@@ -409,10 +414,8 @@ class Runner{
 	private static function exec($test_file){
 		self::$vars = [];
 		self::$current_test = $test_file;
-		self::$benchmark_base = [
-			'm'=>memory_get_usage(),
-			't'=>microtime(true),
-		];
+
+		\testman\Benchmark::start();
 	
 		try{
 			ob_start();
@@ -454,15 +457,8 @@ class Runner{
 		$test_name = self::short_name($test_file);
 		self::exec_setup_teardown($test_file,false);
 		
-		$memory_get_usage = memory_get_usage();
-		if(0 > ($memory_get_usage - self::$benchmark_base['m'])){
-			$memory_get_usage = self::$benchmark_base['m'];
-		}
-		self::$benchmark[$test_name] = [
-			'time'=>round((microtime(true) - (float)self::$benchmark_base['t']),4),
-			'memory'=>ceil($memory_get_usage),
-			'memory_peak'=>ceil(memory_get_peak_usage()),
-		];
+		\testman\Benchmark::stop($test_name);
+		
 		self::$resultset[$test_name] = $res;
 		return [$test_name,$res];
 	}
