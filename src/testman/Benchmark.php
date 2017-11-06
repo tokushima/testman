@@ -25,7 +25,7 @@ class Benchmark{
 			if(is_file($save_path)){
 				unlink($save_path);
 			}
-			if(!file_put_contents($save_path,sprintf("%s\t%s\t%s\t%s\t%s".PHP_EOL,'Path','Time','Mem','Peak Mem','Req'))){
+			if(!file_put_contents($save_path,implode("\t",['Path','Time','Mem','Peak Mem','Timestamp']).PHP_EOL)){
 				throw new \InvalidArgumentException('Creation of benchmark file failed');
 			}
 		}
@@ -59,7 +59,7 @@ class Benchmark{
 			round((microtime(true) - (float)self::$report_base['t']),4),
 			ceil($memory_get_usage),
 			ceil(memory_get_peak_usage()),
-			1,
+			date('Y/m/d H:i:s'),
 		];
 	}
 	public static function write(){
