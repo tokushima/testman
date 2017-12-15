@@ -196,7 +196,7 @@ class Runner{
 						list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
 
 						\testman\Std::println();
-						\testman\Std::println_primary(' '.$testfile);
+						\testman\Std::println_primary(' '.str_replace(getcwd().DIRECTORY_SEPARATOR,'',$file));
 						\testman\Std::println_danger('  ['.$line.']: '.$msg);
 
 						if($has){
@@ -223,7 +223,7 @@ class Runner{
 						$summary = array_shift($msgarr);
 							
 						\testman\Std::println();
-						\testman\Std::println_primary(' '.$testfile);
+						\testman\Std::println_primary(' '.str_replace(getcwd().DIRECTORY_SEPARATOR,'',$file));
 						\testman\Std::println_danger('  ['.$line.']: '.$summary);
 						\testman\Std::println($tab.implode(PHP_EOL.$tab,$msgarr));
 						break;
