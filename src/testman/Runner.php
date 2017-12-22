@@ -199,7 +199,7 @@ class Runner{
 						\testman\Std::println();
 						\testman\Std::println_primary(' '.$testfile);
 						
-						if($testfile != $fail){
+						if($testfile != $file){
 							\testman\Std::println_white('  ('.$file.')');
 						}
 						\testman\Std::println_danger('  ['.$line.']: '.$msg);
@@ -231,7 +231,7 @@ class Runner{
 						\testman\Std::println();
 						\testman\Std::println_primary(' '.$testfile);
 
-						if($testfile != $fail){
+						if($testfile != $file){
 							\testman\Std::println_white('  ('.$file.')');
 						}
 						\testman\Std::println_danger('  ['.$line.']: '.$summary);
