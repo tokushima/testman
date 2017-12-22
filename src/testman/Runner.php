@@ -194,9 +194,14 @@ class Runner{
 					case -1:
 						$fail++;
 						list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
+						$file = str_replace(getcwd().DIRECTORY_SEPARATOR,'',$file);
 
 						\testman\Std::println();
-						\testman\Std::println_primary(' '.str_replace(getcwd().DIRECTORY_SEPARATOR,'',$file));
+						\testman\Std::println_primary(' '.$testfile);
+						
+						if($testfile != $fail){
+							\testman\Std::println_white('  ('.$file.')');
+						}
 						\testman\Std::println_danger('  ['.$line.']: '.$msg);
 
 						if($has){
@@ -218,12 +223,17 @@ class Runner{
 					case -2:
 						$exception++;
 						list(,$time,$file,$line,$msg) = $info;
-							
+						$file = str_replace(getcwd().DIRECTORY_SEPARATOR,'',$file);
+						
 						$msgarr = explode(PHP_EOL,$msg);
 						$summary = array_shift($msgarr);
 							
 						\testman\Std::println();
-						\testman\Std::println_primary(' '.str_replace(getcwd().DIRECTORY_SEPARATOR,'',$file));
+						\testman\Std::println_primary(' '.$testfile);
+
+						if($testfile != $fail){
+							\testman\Std::println_white('  ('.$file.')');
+						}
 						\testman\Std::println_danger('  ['.$line.']: '.$summary);
 						\testman\Std::println($tab.implode(PHP_EOL.$tab,$msgarr));
 						break;
