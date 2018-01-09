@@ -569,4 +569,37 @@ class Browser{
 		$json = new \testman\Json($this->body());
 		return $json->find($name);
 	}
+	
+	/**
+	 * エラーがあるか
+	 * @param \testman\Browser $b
+	 * @param string $type
+	 * @return boolean
+	 */
+	public function has_error($type){
+		$has_error_func = \testman\Conf::get('has_error_func');
+		
+		if(is_callable($has_error_func)){
+			return $has_error_func($b,$type);
+		}else{
+			if(substr(trim($this->body()),0,1) == '{'){
+				$errors = $this->json('error');
+				
+				if(is_array($errors)){
+					foreach($errors as $err){
+						if($err['type'] == $type){
+							return true;
+						}
+					}
+				}
+			}else{
+				foreach($this->xml('error')->find('message') as $message){
+					if($message->in_attr('type') == $type){
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
 }
