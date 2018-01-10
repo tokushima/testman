@@ -26,7 +26,7 @@ class Xml implements \IteratorAggregate{
 	}
 	/**
 	 * (non-PHPdoc)
-	 * @see IteratorAggregate::getIterator()
+	 * @see \IteratorAggregate::getIterator()
 	 */
 	public function getIterator(){
 		return new \ArrayIterator($this->attr);
@@ -188,9 +188,10 @@ class Xml implements \IteratorAggregate{
 	 * @param integer $length
 	 * @return \testman\XmlIterator
 	 */
-	public function find($name,$offset=0,$length=0){
-		if(is_string($name) && strpos($name,'/') !== false){
-			list($name,$path) = explode('/',$name,2);
+	public function find($path=null,$offset=0,$length=0){
+		if(is_string($path) && strpos($path,'/') !== false){
+			list($name,$path) = explode('/',$path,2);
+			
 			foreach(new \testman\XmlIterator($name,$this->value(),0,0) as $t){
 				try{
 					$it = $t->find($path,$offset,$length);
@@ -202,7 +203,7 @@ class Xml implements \IteratorAggregate{
 			}
 			throw new \testman\NotFoundException();
 		}
-		return new \testman\XmlIterator($name,$this->value(),$offset,$length);
+		return new \testman\XmlIterator($path,$this->value(),$offset,$length);
 	}
 	/**
 	 * 対象の件数
@@ -232,6 +233,43 @@ class Xml implements \IteratorAggregate{
 		}
 		throw new \testman\NotFoundException($name.' not found');
 	}
+	
+	/**
+	 * 子要素を展開する
+	 * @return mixed{}
+	 */
+	public function children(){
+		$children = $arr = [];
+		$bool = false;
+		
+		foreach($this->find() as $xml){
+			$bool = true;
+			$name = $xml->name();
+			
+			if(isset($children[$name])){
+				if(!isset($arr[$name])){
+					
+					$children[$name] = [$children[$name]];
+					$arr[$name] = true;
+				}
+				$children[$name][] = $xml->children();
+			}else{
+				$children[$name] = $xml->children();
+			}
+		}
+		if($bool){
+			if(sizeof(array_keys($children)) == 1){
+				foreach($children as $k => $v){
+					if($k == 'data' || preg_match('/^[\A-Z]/',$k)){
+						return !isset($v[0]) ? [$v] : $v;
+					}
+				}
+			}
+			return $children;
+		}
+		return $this->value();
+	}
+	
 	/**
 	 * 匿名タグとしてインスタンス生成
 	 * @param string $value

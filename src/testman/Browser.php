@@ -577,10 +577,12 @@ class Browser{
 	 * @return boolean
 	 */
 	public function has_error($type){
-		$has_error_func = \testman\Conf::get('has_error_func');
+		$func = \testman\Conf::get('browser_has_error_func');
 		
-		if(is_callable($has_error_func)){
-			return $has_error_func($b,$type);
+		if(is_callable($func)){
+			if($func($b,$type)){
+				return;
+			}
 		}else{
 			if(substr(trim($this->body()),0,1) == '{'){
 				$errors = $this->json('error');
@@ -588,18 +590,37 @@ class Browser{
 				if(is_array($errors)){
 					foreach($errors as $err){
 						if($err['type'] == $type){
-							return true;
+							return;
 						}
 					}
 				}
 			}else{
 				foreach($this->xml('error')->find('message') as $message){
 					if($message->in_attr('type') == $type){
-						return true;
+						return;
 					}
 				}
 			}
 		}
-		return false;
+		throw new \testman\NotFoundException($type.' not found, '.(substr($this->body(),0,100).((strlen($this->body()) > 100) ? '..' : '')));
+	}
+	
+	/**
+	 * bodyから探す
+	 * @param string $name
+	 * @return mixed
+	 */
+	public function find_get($name){
+		$func = \testman\Conf::get('browser_find_func');
+		
+		if(is_callable($func)){
+			return $func($b,$name);
+		}else{
+			if(substr(trim($this->body()),0,1) == '{'){
+				return $this->json($name);
+			}else{
+				return $this->xml($name)->children();
+			}
+		}
 	}
 }
