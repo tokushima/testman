@@ -143,6 +143,7 @@ if(!function_exists('url')){
 	 * mapに定義されたurlをフォーマットして返す
 	 * @param string $map_name
 	 * @throws \RuntimeException
+	 * @deprecated
 	 * @return string
 	 */
 	function url($map_name){
@@ -176,21 +177,6 @@ if(!function_exists('resource')){
 		return \testman\Resource::path($file);
 	}
 }
-if(!function_exists('rand_id')){
-	/**
-	 * ランダムなID を生成する
-	 * @return  string
-	 */
-	function rand_id($id,$length=32){
-		$code = '';
-			
-		for($i=0;$i<=$length;$i+=32){
-			$code .= md5(base64_encode($id.microtime().rand(1,9999999)));
-		}
-		return substr($code,$length*-1);
-	}
-}
-
 
 
 
