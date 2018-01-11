@@ -310,20 +310,8 @@ class Browser{
 		if(!isset($this->resource)){
 			$this->resource = curl_init();
 		}
-
-		$url_args = [];
-		if(is_array($url)){
-			$url_args = $url;
-			$url = array_shift($url_args);
-		}
-		if(preg_match('/^[\w_]+::[\w_\/]+$/',$url)){
-			$urls = \testman\Conf::get('urls',[]);
-			
-			if(!empty($urls) && isset($urls[$url]) && substr_count($urls[$url],'%s') == sizeof($url_args)){
-				$url = vsprintf($urls[$url],$url_args);
-			}
-		}
 		
+		$url = \testman\Util::url($url);
 		$url_info = parse_url($url);
 		$cookie_base_domain = (isset($url_info['host']) ? $url_info['host'] : '').(isset($url_info['path']) ? $url_info['path'] : '');
 

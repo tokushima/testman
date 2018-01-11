@@ -38,18 +38,6 @@ if(php_sapi_name() !== 'cli'){
 	return;
 }
 
-
-
-// set functions
-if(!function_exists('conf_urls')){
-	/**
-	 * mapにurlを定義する
-	 * @param array $urls
-	 */
-	function conf_urls(array $urls){
-		\testman\Conf::set('urls',$urls);
-	}
-}
 if(!function_exists('fail')){
 	/**
 	 * 失敗とする
@@ -138,28 +126,6 @@ if(!function_exists('mneq')){
 	}
 }
 
-if(!function_exists('url')){
-	/**
-	 * mapに定義されたurlをフォーマットして返す
-	 * @param string $map_name
-	 * @throws \RuntimeException
-	 * @deprecated
-	 * @return string
-	 */
-	function url($map_name){
-		$args = func_get_args();
-		array_shift($args);
-		$urls = \testman\Conf::get('urls',[]);
-		
-		if(empty($urls) || !is_array($urls)){
-			throw new \testman\NotFoundException('urls empty');
-		}
-		if(isset($urls[$map_name]) && substr_count($urls[$map_name],'%s') == sizeof($args)){
-			return vsprintf($urls[$map_name],$args);
-		}
-		throw new \testman\NotFoundException($map_name.(isset($urls[$map_name]) ? '['.sizeof($args).']' : '').' not found');
-	}
-}
 if(!function_exists('b')){
 	/**
 	 * ブラウザを返す
@@ -169,15 +135,6 @@ if(!function_exists('b')){
 		return new \testman\Browser();
 	}
 }
-/**
- * テスト用リソースファイルのパスを取得する
- */
-if(!function_exists('resource')){
-	function resource($file){
-		return \testman\Resource::path($file);
-	}
-}
-
 
 
 // include

@@ -48,4 +48,25 @@ class Util{
 		$d = (!empty($d) && $d[0] != '/' && substr($d,0,3) != '#T#' && !strpos($d,'#W#')) ? '/'.$d : $d;
 		return str_replace($p[4],$p[5],$r.$d.$t);
 	}
+	
+	/**
+	 * MAPに従いURLを返す
+	 * @param string $url
+	 * @return mixed
+	 */
+	public static function url($url){
+		if(is_array($url) || strpos($url,'://') === false){
+			$urls = \testman\Conf::get('urls',[]);
+			$url_args = [];
+			
+			if(is_array($url)){
+				$url_args = $url;
+				$url = array_shift($url_args);
+			}
+			if(!empty($urls) && isset($urls[$url]) && substr_count($urls[$url],'%s') == sizeof($url_args)){
+				$url = vsprintf($urls[$url],$url_args);
+			}
+		}
+		return $url;
+	}
 }
