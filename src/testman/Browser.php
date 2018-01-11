@@ -316,7 +316,7 @@ class Browser{
 			$url_args = $url;
 			$url = array_shift($url_args);
 		}
-		if(preg_match('/^[\w_]+::[\w_]+$/',$url)){
+		if(preg_match('/^[\w_]+::[\w_\/]+$/',$url)){
 			$urls = \testman\Conf::get('urls',[]);
 			
 			if(!empty($urls) && isset($urls[$url]) && substr_count($urls[$url],'%s') == sizeof($url_args)){
