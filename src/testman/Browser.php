@@ -102,7 +102,7 @@ class Browser{
 		return $this->header('Accept','application/debug');
 	}
 	/**
-	 * ACCEPT=application/debugを設定する
+	 * ACCEPT=application/jsonを設定する
 	 * @return $this
 	 */
 	public function set_header_accept_json(){
