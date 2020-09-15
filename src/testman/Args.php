@@ -58,7 +58,7 @@ class Args{
 	}
 	/**
 	 * オプション値を配列として取得
-	 * @param unknown $name
+	 * @param string $name
 	 * @return multitype:
 	 */
 	public static function opts($name){

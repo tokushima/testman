@@ -6,7 +6,7 @@ class Finder{
 	 * テスト対象ファイルを探す
 	 * @param string $test_dir
 	 * @throws \InvalidArgumentException
-	 * @return stirng[]
+	 * @return string[]
 	 */
 	public static function get_list($test_dir){
 		$test_list = [];
@@ -30,9 +30,9 @@ class Finder{
 	}
 	/**
 	 * サマリ一覧
-	 * @param unknown $testdir
+	 * @param string $testdir
 	 * @param string $keyword
-	 * @return Ambigous <string, multitype:>|multitype:unknown
+	 * @return array
 	 */
 	public static function summary_list($testdir,$keyword=''){
 		$cwd = getcwd().DIRECTORY_SEPARATOR;

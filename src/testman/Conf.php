@@ -51,7 +51,7 @@ class Conf{
 	/**
 	 * 設定ファイル/ディレクトリが存在するか
 	 * @param string $name
-	 * @return Ambigous <NULL, string>|NULL
+	 * @return boolean
 	 */
 	public static function has_settings($name){
 		try{
