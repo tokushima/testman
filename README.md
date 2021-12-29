@@ -1,6 +1,6 @@
 # testman
 
-(PHP 7)
+(PHP >= 7.1)
 
 ## Quick test
 

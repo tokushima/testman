@@ -76,7 +76,7 @@ class Coverage{
 	 * 測定を終了する
 	 */
 	public static function stop(){
-		if(is_file(self::$db)){
+		if(!empty(self::$db) && is_file(self::$db)){
 			$target_list_db = self::$db.'.target';
 			$tmp_db = self::$db.'.tmp';
 

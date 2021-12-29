@@ -16,15 +16,15 @@ class XmlIterator implements \Iterator{
 		$this->length = $length;
 		$this->count = 0;
 	}
-	public function key(){
+	public function key(): mixed{
 		$this->tag->name();
 	}
-	public function current(){
+	public function current(): mixed{
 		$this->plain = substr($this->plain,0,$this->tag->cur()).substr($this->plain,$this->tag->cur() + strlen($this->tag->plain()));
 		$this->count++;
 		return $this->tag;
 	}
-	public function valid(){
+	public function valid(): bool{
 		if($this->length > 0 && ($this->offset + $this->length) <= $this->count){
 			return false;
 		}
@@ -51,9 +51,9 @@ class XmlIterator implements \Iterator{
 		}
 		return false;
 	}
-	public function next(){
+	public function next(): void{
 	}
-	public function rewind(){
+	public function rewind(): void{
 		for($i=0;$i<$this->offset;$i++){
 			if($this->valid()){
 				$this->current();

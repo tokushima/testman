@@ -1,14 +1,1 @@
-/.settings
-/.buildpath
-/.project
-/composer.phar
-/vendor
-/work/
 /fixture_data.dat
-/cmdman.phar
-/coverage.xml
-/test.php
-/newdata.dat
-/version
-/testman.phar
-/make.sh
