@@ -2,18 +2,18 @@
 namespace testman;
 
 class Benchmark{
-	private static $path;
-	private static $report_base = [];
-	private static $report = [];
+	private static string $path = '';
+	private static array $report_base = [];
+	private static array $report = [];
 	
-	public static function init(){
-		$save_path = null;
+	public static function init(): string{
+		$save_path = '';
 		
 		if(\testman\Args::has_opt('benchmark')){
 			$save_path = \testman\Args::opt('benchmark');
 		}
 		if(empty($save_path)){
-			$save_path = \testman\Conf::get('benchmark');
+			$save_path = \testman\Conf::get('benchmark', '');
 		}
 		
 		if(!empty($save_path)){
@@ -34,21 +34,21 @@ class Benchmark{
 		return self::$path;
 	}
 	
-	public static function is_running(){
+	public static function is_running(): bool{
 		return !empty(self::$path);
 	}
 	
-	public static function save_path(){
+	public static function save_path(): string{
 		return self::$path;
 	}
 	
-	public static function start(){
+	public static function start(): void{
 		self::$report_base = [
 			'm'=>memory_get_usage(),
 			't'=>microtime(true),
 		];
 	}
-	public static function stop($test_name){
+	public static function stop(string $test_name): void{
 		$memory_get_usage = memory_get_usage();
 		
 		if(0 > ($memory_get_usage - self::$report_base['m'])){
@@ -62,7 +62,7 @@ class Benchmark{
 			date('Y/m/d H:i:s'),
 		];
 	}
-	public static function write(){
+	public static function write(): void{
 		if(!empty(self::save_path())){
 			foreach(self::$report as $name => $values){
 				file_put_contents(self::save_path(),implode("\t",$values).PHP_EOL,FILE_APPEND);

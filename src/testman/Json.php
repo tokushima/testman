@@ -2,26 +2,20 @@
 namespace testman;
 /**
  * JSON 文字列を操作する
- * @author tokushima
- *
  */
 class Json{
 	private $arr = [];
 	
 	/**
 	 * JSONからオブジェクトを生成する
-	 * @param string $json
-	 * @return \testman\Json
 	 */
-	public function __construct($json){
+	public function __construct(string $json){
 		$this->arr = self::decode($json);
 	}
 	/**
 	 * パスから値を取得する
-	 * @param string $name
-	 * @return mixed
 	 */
-	public function find($name=null){
+	public function find(?string $name=null){
 		if(empty($name)){
 			return $this->arr;
 		}
@@ -40,11 +34,8 @@ class Json{
 	
 	/**
 	 * 値を JSON 形式にして返す
-	 * @param mixed $val
-	 * @param boolean $format
-	 * @return string
 	 */
-	public static function encode($val,$format=false){
+	public static function encode($val, bool $format=false): string{
 		$json = ($format) ?
 			json_encode(self::encode_object($val),JSON_PRETTY_PRINT) :
 			json_encode(self::encode_object($val));
@@ -55,7 +46,7 @@ class Json{
 		return $json;
 	}
 	
-	private static function encode_object($val){
+	private static function encode_object($val): array{
 		if(is_object($val) || is_array($val)){
 			$rtn = [];
 			
@@ -68,10 +59,8 @@ class Json{
 	}
 	/**
 	 * JSON 文字列をデコードする
-	 * @param string $json
-	 * @return mixed
 	 */
-	public static function decode($json){
+	public static function decode(string $json){
 		if(is_null($json) || $json === ''){
 			return null;
 		}

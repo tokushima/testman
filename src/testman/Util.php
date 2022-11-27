@@ -4,11 +4,8 @@ namespace testman;
 class Util{
 	/**
 	 * 絶対パスを返す
-	 * @param string $a
-	 * @param string $b
-	 * @return string
 	 */
-	public static function path_absolute($a,$b){
+	public static function path_absolute(string $a, string $b): string{
 		if($b === '' || $b === null) return $a;
 		if($a === '' || $a === null || preg_match("/^[a-zA-Z]+:/",$b)) return $b;
 		if(preg_match("/^[\w]+\:\/\/[^\/]+/",$a,$h)){
@@ -51,10 +48,9 @@ class Util{
 	
 	/**
 	 * MAPに従いURLを返す
-	 * @param string $url
-	 * @return mixed
+	 * @param string|array $url
 	 */
-	public static function url($url){
+	public static function url($url): string{
 		if(is_array($url) || strpos($url,'://') === false){
 			$urls = \testman\Conf::get('urls',[]);
 			$url_args = [];

@@ -4,8 +4,6 @@ namespace testman;
 class Assert{
 	/**
 	 * 変数を展開していく
-	 * @param mixed $var
-	 * @return string
 	 */
 	public static function expvar($var){
 		if(is_numeric($var)){

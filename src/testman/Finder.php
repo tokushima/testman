@@ -4,11 +4,8 @@ namespace testman;
 class Finder{
 	/**
 	 * テスト対象ファイルを探す
-	 * @param string $test_dir
-	 * @throws \InvalidArgumentException
-	 * @return string[]
 	 */
-	public static function get_list($test_dir){
+	public static function get_list(string $test_dir): array{
 		$test_list = [];
 
 		if(is_dir($test_dir)){
@@ -30,18 +27,15 @@ class Finder{
 	}
 	/**
 	 * サマリ一覧
-	 * @param string $testdir
-	 * @param string $keyword
-	 * @return array
 	 */
-	public static function summary_list($testdir,$keyword=''){
+	public static function summary_list(string $testdir, $keyword=null): array{
 		$cwd = getcwd().DIRECTORY_SEPARATOR;
 
 		$summary = function($src){
 			$summary = '';
 				
 			if(preg_match('/\/\*.+?\*\//s',$src,$m)){
-				list($summary) = explode(PHP_EOL,trim(
+				[$summary] = explode(PHP_EOL,trim(
 					preg_replace('/@.+/','',
 						preg_replace("/^[\s]*\*[\s]{0,1}/m","",str_replace(['/'.'**','*'.'/'],'',$m[0]))
 					)
@@ -72,15 +66,14 @@ class Finder{
 	}
 	/**
 	 * setupの説明
-	 * @param string $testdir
 	 */
-	public static function setup_info($dir){
+	public static function setup_info(string $dir): void{
 		$dir = realpath($dir);
 		
 		if($dir === false){
 			throw new \InvalidArgumentException($dir.' not found');
 		}
-		list($var_types,$inc_list,$target_dir) = self::setup_teardown_files($dir, true);
+		[$var_types, $inc_list, $target_dir]= self::setup_teardown_files($dir, true);
 			
 		$summary_list = [];
 		foreach($inc_list as $inc){
@@ -130,11 +123,8 @@ class Finder{
 	}
 	/**
 	 * setup/teardownを探す
-	 * @param string $dir
-	 * @param boolean $is_setup
-	 * @return string[]
 	 */
-	public static function setup_teardown_files($testdir,$is_setup){
+	public static function setup_teardown_files(string $testdir, bool $is_setup): array{
 		if(is_dir($dir=$testdir) || is_dir($dir=dirname($testdir))){
 			$file = ($is_setup) ? '__setup__.php' : '__teardown__.php';
 			$inc_list = [];

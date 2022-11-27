@@ -2,23 +2,23 @@
 namespace testman;
 
 class Runner{
-	private static $resultset = [];
-	private static $current_test;
-	private static $start = false;
-	private static $vars = [];
-	private static $benchmark = [];
+	private static array $resultset = [];
+	private static string $current_test;
+	private static bool $start = false;
+	private static array $vars = [];
+	private static array $benchmark = [];
 
 	/**
 	 * 現在実行しているテスト
 	*/
-	public static function current(){
+	public static function current(): string{
 		return self::$current_test;
 	}
-	public static function benchmark(){
+	public static function benchmark(): array{
 		return self::$benchmark;
 	}
 
-	private static function trim_msg($msg,$len){
+	private static function trim_msg(string $msg, int $len): string{
 		if(strlen($msg) > $len){
 			return mb_substr($msg,0,ceil($len/2)).' .. '.mb_substr($msg,ceil($len/2)*-1);
 		}
@@ -26,9 +26,8 @@ class Runner{
 	}
 	/**
 	 * 対象のテスト群を実行する
-	 * @param string $testdir
 	 */
-	public static function start($testdir){
+	public static function start(string $testdir): array{
 		if(self::$start){
 			return self::$resultset;
 		}
@@ -261,7 +260,7 @@ class Runner{
 		return self::$resultset;
 	}
 
-	private static function output($output){
+	private static function output(string $output): string{
 		if(!is_dir(dirname($output))){
 			mkdir(dirname($output),0777,true);
 		}
@@ -352,7 +351,7 @@ class Runner{
 
 		return realpath($output);
 	}
-	private static function vars_type_validation($type,$name,$var){
+	private static function vars_type_validation(string $type, string $name, $var): void{
 		$is_a = false;
 		if(substr($type,-2) == '[]'){
 			$is_a = true;
@@ -369,6 +368,7 @@ class Runner{
 					}
 					break;
 				case 'integer':
+				case 'int':
 					if(!is_int($v)){
 						throw new \testman\DefinedVarsInvalidTypeException($name.' must be an '.$type);
 					}
@@ -378,6 +378,7 @@ class Runner{
 						throw new \testman\DefinedVarsInvalidTypeException($name.' must be an '.$type);
 					}
 					break;
+				case 'bool':					
 				case 'boolean':
 					if(!is_bool($v)){
 						throw new \testman\DefinedVarsInvalidTypeException($name.' must be an '.$type);
@@ -393,7 +394,7 @@ class Runner{
 			}
 		}
 	}
-	private static function exec_include($_is_setup,$_inc,$_var_types){
+	private static function exec_include(bool $_is_setup, array $_inc, array $_var_types): void{
 		extract(self::$vars);
 		include($_inc['path']);
 			
@@ -411,17 +412,17 @@ class Runner{
 			}
 		}
 	}
-	private static function exec_setup_teardown($test_file,$is_setup){
-		list($var_types,$inc_list,$target_dir) = \testman\Finder::setup_teardown_files($test_file,$is_setup);
+	private static function exec_setup_teardown(string $test_file, bool $is_setup): void{
+		[$var_types, $inc_list, $target_dir] = \testman\Finder::setup_teardown_files($test_file,$is_setup);
 			
 		foreach($inc_list as $inc){
 			self::exec_include($is_setup,$inc,$var_types);
 		}
 	}
-	public static function short_name($test_file){
+	public static function short_name(string $test_file): string{
 		return str_replace(getcwd().DIRECTORY_SEPARATOR,'',$test_file);
 	}
-	private static function exec($test_file){
+	private static function exec(string $test_file): array{
 		self::$vars = [];
 		self::$current_test = $test_file;
 

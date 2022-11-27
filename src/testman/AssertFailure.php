@@ -4,16 +4,16 @@ namespace testman;
 class AssertFailure extends \Exception{
 	private $expectation;
 	private $result;
-	private $has = false;
+	private bool $has = false;
 
-	public function ab($expectation,$result){
+	public function ab($expectation, $result): self{
 		$this->expectation = $expectation;
 		$this->result = $result;
 		$this->has = true;
 		return $this;
 	}
 
-	public function has(){
+	public function has(): bool{
 		return $this->has;
 	}
 	public function expectation(){

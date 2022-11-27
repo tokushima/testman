@@ -1,83 +1,71 @@
 <?php
 namespace testman;
-/**
- * HTTP接続クラス
- * @author tokushima
- *
- */
-class Browser{
-	private $resource;
-	private $agent;
-	private $timeout = 30;
-	private $redirect_max = 20;
-	private $redirect_count = 1;
 
-	private $request_header = [];
-	private $request_vars = [];
-	private $request_file_vars = [];
-	private $head;
-	private $body;
-	private $cookie = [];
-	private $url;
-	private $status;
+class Browser{
+	private $resource; // resource|false|CurlHandle
+	private ?string $agent;
+	private int $timeout = 30;
+	private int $redirect_max = 20;
+	private int $redirect_count = 1;
+
+	private array $request_header = [];
+	private array $request_vars = [];
+	private array $request_file_vars = [];
+	private string $head;
+	private string $body;
+	private array $cookie = [];
+	private string $url;
+	private int $status;
 	
-	private $user;
-	private $password;
-	private $bearer_token;
+	private ?string $user;
+	private ?string $password;
+	private ?string $bearer_token;
 	
-	private $raw;
+	private string $raw;
 	
-	private static $recording_request = false;
-	private static $record_request = [];
+	private static bool $recording_request = false;
+	private static array $record_request = [];
 	
-	public function __construct($agent=null,$timeout=30,$redirect_max=20){
+	public function __construct(?string $agent=null, int $timeout=30, int $redirect_max=20){
 		$this->agent = $agent;
 		$this->timeout = (int)$timeout;
 		$this->redirect_max = (int)$redirect_max;
 	}
 	/**
 	 * 最大リダイレクト回数を設定
-	 * @param integer $redirect_max
 	 */
-	public function redirect_max($redirect_max){
-		$this->redirect_max = (integer)$redirect_max;
+	public function redirect_max(int $redirect_max){
+		$this->redirect_max = $redirect_max;
 		return $this;
 	}
 	/**
 	 * タイムアウト時間を設定
-	 * @param integer $timeout
-	 * @return $this
 	 */
-	public function timeout($timeout){
-		$this->timeout = (int)$timeout;
+	public function timeout(int $timeout): self{
+		$this->timeout = $timeout;
 		return $this;
 	}
 	/**
 	 * ユーザエージェントを設定
-	 * @param string $agent
-	 * @return $this
 	 */
-	public function agent($agent){
+	public function agent(string $agent): self{
 		$this->agent = $agent;
 		return $this;
 	}
 	/**
 	 * Basic認証
-	 * @param string $user ユーザ名
-	 * @param string $password パスワード
-	 * @return $this
 	 */
-	public function basic($user,$password){
+	public function basic(string $user, string $password): self{
 		$this->user = $user;
 		$this->password = $password;
 		return $this;
 	}
 	/**
 	 * Bearer token
-	 * @param string $token
 	 */
-	public function bearer_token($token){
+	public function bearer_token(string $token): self{
 		$this->bearer_token = $token;
+		return $this;
 	}
 	
 	public function __toString(){
@@ -85,37 +73,29 @@ class Browser{
 	}
 	/**
 	 * ヘッダを設定
-	 * @param string $key
-	 * @param string $value
-	 * @return $this
 	 */
-	public function header($key,$value=null){
+	public function header(string $key, ?string $value=null): self{
 		$this->request_header[$key] = $value;
 		return $this;
 	}
 	
 	/**
 	 * ACCEPT=application/debugを設定する
-	 * @return $this
 	 */
-	public function set_header_accept_debug(){
+	public function set_header_accept_debug(): self{
 		return $this->header('Accept','application/debug');
 	}
 	/**
 	 * ACCEPT=application/jsonを設定する
-	 * @return $this
 	 */
-	public function set_header_accept_json(){
+	public function set_header_accept_json(): self{
 		return $this->header('Accept','application/json');
 	}
 	
 	/**
 	 * クエリを設定
-	 * @param string $key
-	 * @param string $value
-	 * @return $this
 	 */
-	public function vars($key,$value=null){
+	public function vars(string $key, $value=null): self{
 		if(is_bool($value)){
 			$value = ($value) ? 'true' : 'false';
 		}
@@ -128,11 +108,8 @@ class Browser{
 	}
 	/**
 	 * クエリにファイルを設定
-	 * @param string $key
-	 * @param string $filename
-	 * @return $this
 	 */
-	public function file_vars($key,$filename){
+	public function file_vars(string $key, string $filename): self{
 		$this->request_file_vars[$key] = $filename;
 		
 		if(isset($this->request_vars[$key])){
@@ -142,19 +119,17 @@ class Browser{
 	}
 	/**
 	 * クエリが設定されているか
-	 * @param string $key
-	 * @return $this
 	 */
-	public function has_vars($key){
-		return (array_key_exists($key,$this->request_vars) || array_key_exists($key,$this->request_file_vars));
+	public function has_vars(string $key): bool{
+		return (
+			array_key_exists($key, $this->request_vars) || 
+			array_key_exists($key,$this->request_file_vars)
+		);
 	}
 	/**
 	 * cURL 転送用オプションを設定する
-	 * @param string $key
-	 * @param mixed $value
-	 * @return $this
 	 */
-	public function setopt($key,$value){
+	public function setopt(string $key, $value): self{
 		if(!isset($this->resource)){
 			$this->resource = curl_init();
 		}
@@ -164,118 +139,103 @@ class Browser{
 	
 	/**
 	 * 結果のヘッダを取得
-	 * @return string
 	 */
-	public function response_headers(){
+	public function response_headers(): string{
 		return $this->head;
 	}
 	/**
 	 * クッキーを取得
-	 * @return mixed{}
 	 */
-	public function cookies(){
+	public function cookies(): array{
 		return $this->cookie;
 	}
 	/**
 	 * 結果の本文を取得
-	 * @return string
 	 */
-	public function body(){
+	public function body(): string{
 		return ($this->body === null || is_bool($this->body)) ? '' : $this->body;
 	}
 	/**
 	 * 結果のURLを取得
-	 * @return string
 	 */
-	public function url(){
+	public function url(): string{
 		return $this->url;
 	}
 	/**
 	 * 結果のステータスを取得
-	 * @return integer
 	 */
-	public function status(){
-		return empty($this->status) ? null : (int)$this->status;
+	public function status(): int{
+		return empty($this->status) ? 0 : (int)$this->status;
 	}
 	/**
 	 * HEADリクエスト
-	 * @param string $url
-	 * @return $this
+	 * @param string|array $url
 	 */
-	public function do_head($url){
+	public function do_head($url): self{
 		return $this->request('HEAD',$url);
 	}
 	/**
 	 * PUTリクエスト
-	 * @param string $url
-	 * @return $this
+	 * @param string|array $url
 	 */
-	public function do_put($url){
+	public function do_put($url): self{
 		return $this->request('PUT',$url);
 	}
 	/**
 	 * DELETEリクエスト
-	 * @param string $url
-	 * @return $this
+	 * @param string|array $url
 	 */
-	public function do_delete($url){
+	public function do_delete($url): self{
 		return $this->request('DELETE',$url);
 	}
 	/**
 	 * GETリクエスト
-	 * @param string $url
-	 * @return $this
+	 * @param string|array $url
 	 */
-	public function do_get($url){
+	public function do_get($url): self{
 		return $this->request('GET',$url);
 	}
 	/**
 	 * POSTリクエスト
-	 * @param string $url
-	 * @return $this
+	 * @param string|array $url
 	 */
-	public function do_post($url){
+	public function do_post($url): self{
 		return $this->request('POST',$url);
 	}
 	/**
 	 * POSTリクエスト(RAW)
-	 * @param string $url
-	 * @return $this
+	 * @param string|array $url
 	 */
-	public function do_raw($url,$value){
+	public function do_raw($url, string $value): self{
 		$this->raw = $value;
 		return $this->request('RAW',$url);
 	}
 	/**
 	 * POSTリクエスト(JSON)
-	 * @param string $url
-	 * @return $this
+	 * @param string|array $url
 	 */
-	public function do_json($url){
+	public function do_json($url): self{
 		$this->header('Content-Type','application/json');
 		return $this->do_raw($url,json_encode($this->request_vars));
 	}
 	/**
 	 * GETリクエストでダウンロードする
-	 * @param string $url
-	 * @param string $filename
+	 * @param string|array $url
 	 */
-	public function do_download($url,$filename){
+	public function do_download($url, string $filename): self{
 		return $this->request('GET',$url,$filename);
 	}
 	/**
 	 * POSTリクエストでダウンロードする
-	 * @param string $url
-	 * @param string $filename
+	 * @param string|array $url
 	 */
-	public function do_post_download($url,$filename){
+	public function do_post_download($url, string $filename): self{
 		return $this->request('POST',$url,$filename);
 	}
 	/**
 	 * ヘッダ情報をハッシュで取得する
-	 * @return string{}
 	 */
-	public function explode_head(){
+	public function explode_head(): array{
 		$result = [];
 		foreach(explode("\n",$this->head) as $h){
 			if(preg_match("/^(.+?):(.+)$/",$h,$match)) $result[trim($match[1])] = trim($match[2]);
@@ -284,29 +244,22 @@ class Browser{
 	}
 	/**
 	 * ヘッダデータを書き込む処理
-	 * @param resource $resource
-	 * @param string $data
-	 * @return number
 	 */
-	private function callback_head($resource,$data){
+	private function callback_head($resource, string $data): int{
 		$this->head .= $data;
 		return strlen($data);
 	}
 	/**
 	 * データを書き込む処理
-	 * @param resource $resource
-	 * @param string $data
-	 * @return number
 	 */
-	private function callback_body($resource,$data){
+	private function callback_body($resource, string $data): int{
 		$this->body .= $data;
 		return strlen($data);
 	}
 	/**
 	 * 送信たリクエストの記録を開始する
-	 * @return string[]
 	 */
-	public static function start_record(){
+	public static function start_record(): array{
 		self::$recording_request = true;
 		
 		$requests = self::$record_request;
@@ -315,13 +268,16 @@ class Browser{
 	}
 	/**
 	 * 送信したリクエストの記録を終了する
-	 * @return string[]
 	 */
-	public static function stop_record(){
+	public static function stop_record(): array{
 		self::$recording_request = false;
 		return self::$record_request;
 	}
-	private function request($method,$url,$download_path=null){
+
+	/**
+	 * @param string|array $url
+	 */
+	private function request(string $method, $url, ?string $download_path=null){
 		if(!isset($this->resource)){
 			$this->resource = curl_init();
 		}
@@ -568,9 +524,8 @@ class Browser{
 	}
 	/**
 	 * bodyを解析しXMLオブジェクトとして返す
-	 * @return \testman\Xml
 	 */
-	public function xml($name=null){
+	public function xml(?string $name=null): \testman\Xml{
 		try{
 			return \testman\Xml::extract($this->body(),$name);
 		}catch(\testman\NotFoundException $e){
@@ -578,26 +533,21 @@ class Browser{
 		}
 	}
 	/**
-	 * bodyを解析し配列として返す
-	 * @param string $name
-	 * @return mixed{}
+	 * bodyを解析しJSONの結果として返す
 	 */
-	public function json($name=null){
+	public function json(?string $name=null){
 		$json = new \testman\Json($this->body());
 		return $json->find($name);
 	}
 	
 	/**
 	 * エラーがあるか
-	 * @param \testman\Browser $b
-	 * @param string $type
-	 * @return boolean
 	 */
-	public function has_error($type){
+	public function has_error(string $type): void{
 		$func = \testman\Conf::get('browser_has_error_func');
 		
 		if(is_callable($func)){
-			if($func($b,$type)){
+			if($func($this, $type)){
 				return;
 			}
 		}else{
@@ -624,14 +574,12 @@ class Browser{
 	
 	/**
 	 * bodyから探す
-	 * @param string $name
-	 * @return mixed
 	 */
-	public function find_get($name){
+	public function find_get(string $name){
 		$func = \testman\Conf::get('browser_find_func');
 		
 		if(is_callable($func)){
-			return $func($b,$name);
+			return $func($this, $name);
 		}else{
 			if(substr(trim($this->body()),0,1) == '{'){
 				return $this->json($name);

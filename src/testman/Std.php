@@ -2,29 +2,26 @@
 namespace testman;
 
 class Std{
-	private static $stdout = true;
+	private static bool $stdout = true;
 
 	/**
 	 * 標準出力に表示するか
-	 * @param boolean $bool
 	 */
-	public static function disp($bool){
+	public static function disp(bool $bool){
 		self::$stdout = $bool;
 	}
 	/**
 	 * 色付きでプリント
-	 * @param string $msg
 	 */
-	public static function p($msg,$color='0'){
+	public static function p(string $msg, string $color='0'){
 		if(self::$stdout){
 			print("\033[".$color."m".$msg."\033[0m");
 		}
 	}
 	/**
 	 * カーソルを移動
-	 * @param integer $num
 	 */
-	public static function cur($up_down,$left_right){
+	public static function cur(int $up_down, int $left_right): void{
 		if(!empty($up_down)){
 			if($up_down < 0){
 				print("\033[".($up_down*-1)."A");
@@ -43,14 +40,13 @@ class Std{
 	/**
 	 * １行削除
 	 */
-	public static function line_clear(){
+	public static function line_clear(): void{
 		print("\033[2K");
 	}
 	/**
 	 * BackSpace
-	 * @param integer $num
 	 */
-	public static function bs($num=0){
+	public static function bs(int $num=0): void{
 		if(\testman\Conf::get('stdbs',true) === false){
 			print(PHP_EOL);
 		}else{
@@ -65,52 +61,49 @@ class Std{
 	}
 	/**
 	 * 改行つきで色付きでプリント
-	 * @param string $msg
-	 * @param string $color ANSI Colors
 	 */
-	public static function println($msg='',$color='0'){
-		self::p($msg.PHP_EOL,$color);
+	public static function println(string $msg='', string $ansi_color='0'){
+		self::p($msg.PHP_EOL,$ansi_color);
 	}
 	/**
 	 * White
-	 * @param string $msg
 	 */
-	public static function println_white($msg){
+	public static function println_white(string $msg){
 		self::println($msg,'37');
 	}
 	/**
 	 * Blue
 	 * @param string $msg
 	 */
-	public static function println_primary($msg){
+	public static function println_primary(string $msg){
 		self::println($msg,'1;34');
 	}
 	/**
 	 * Green
 	 * @param string $msg
 	 */
-	public static function println_success($msg){
+	public static function println_success(string $msg){
 		self::println($msg,'32');
 	}
 	/**
 	 * Cyan
 	 * @param string $msg
 	 */
-	public static function println_info($msg){
+	public static function println_info(string $msg){
 		self::println($msg,'36');
 	}
 	/**
 	 * Yellow
 	 * @param string $msg
 	 */
-	public static function println_warning($msg){
+	public static function println_warning(string $msg){
 		self::println($msg,'33');
 	}
 	/**
 	 * Red
 	 * @param string $msg
 	 */
-	public static function println_danger($msg){
+	public static function println_danger(string $msg){
 		self::println($msg,'31');
 	}
 }

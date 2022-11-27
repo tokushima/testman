@@ -2,16 +2,14 @@
 namespace testman;
 
 class Coverage{
-	static private $db;
-	static private $result = [];
-	static private $linkvars = [];
+	static private string $db;
+	static private array $result = [];
+	static private array $linkvars = [];
 
 	/**
 	 * リンクファイルが存在するか
-	 * @param mixed $vars
-	 * @return boolean
 	*/
-	public static function has_link(&$vars){
+	public static function has_link(&$vars): bool{
 		if(empty(self::$linkvars)){
 			return false;
 		}
@@ -20,17 +18,14 @@ class Coverage{
 	}
 	/**
 	 * リンクファイル名
-	 * @return string
 	 */
-	public static function link(){
+	public static function link(): string{
 		return '_test_link'.md5(__FILE__);
 	}
 	/**
 	 * 測定を開始する
-	 * @param string $output_xml 書き出し先
-	 * @throws \RuntimeException
 	 */
-	public static function start($output_xml,$target_dir){
+	public static function start(string $output_xml, string $target_dir): bool{
 		if(!empty($output_xml)){
 			if(extension_loaded('xdebug')){
 				if(!is_dir($d = dirname($output_xml))){
@@ -75,7 +70,7 @@ class Coverage{
 	/**
 	 * 測定を終了する
 	 */
-	public static function stop(){
+	public static function stop(): bool{
 		if(!empty(self::$db) && is_file(self::$db)){
 			$target_list_db = self::$db.'.target';
 			$tmp_db = self::$db.'.tmp';
@@ -131,15 +126,14 @@ class Coverage{
 	}
 	/**
 	 * 結果の取得
-	 * @return string[]
 	 */
-	public static function get(){
+	public static function get(): array{
 		return self::$result;
 	}
 	/**
 	 * startで指定した$work_dirに結果のXMLを出力する
 	 */
-	public static function output($written_xml){
+	public static function output(bool $written_xml): void{
 		\testman\Std::println();
 		\testman\Std::println_warning('Coverage: ');
 			
@@ -203,7 +197,7 @@ class Coverage{
 		}
 	}
 
-	public static function load($xml_file){
+	public static function load(string $xml_file): int{
 		$xml = \testman\Xml::extract(file_get_contents($xml_file),'coverage');
 		$create_date = strtotime($xml->in_attr('create_date'));
 			
@@ -218,7 +212,7 @@ class Coverage{
 		return $create_date;
 	}
 
-	public static function output_source($source_file,$coverage_date){
+	public static function output_source(string $source_file, int $coverage_date){
 		if(!is_file($source_file)){
 			throw new \testman\NotFoundException($source_file.' not found');
 		}

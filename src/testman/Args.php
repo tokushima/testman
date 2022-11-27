@@ -2,13 +2,13 @@
 namespace testman;
 
 class Args{
-	static private $opt = [];
-	static private $value = [];
+	static private array $opt = [];
+	static private array $value = [];
 
 	/**
 	 * 初期化
 	*/
-	public static function init(){
+	public static function init(): void{
 		$opt = $value = [];
 		$argv = array_slice((isset($_SERVER['argv']) ? $_SERVER['argv'] : []),1);
 			
@@ -33,40 +33,30 @@ class Args{
 	}
 	/**
 	 * オプション値の取得
-	 * @param string $name
-	 * @param string $default
-	 * @return string
 	 */
-	public static function opt($name,$default=false){
+	public static function opt(string $name, $default=false){
 		return array_key_exists($name,self::$opt) ? self::$opt[$name][0] : $default;
 	}
 	/**
 	 * オプションが宣言されたか
-	 * @param string $name
-	 * @return boolean
 	 */
-	public static function has_opt($name){
+	public static function has_opt(string $name): bool{
 		return array_key_exists($name,self::$opt);		
 	}
 	/**
 	 * 引数の取得
-	 * @param string $default
-	 * @return string
 	 */
-	public static function value($default=null){
+	public static function value($default=null): string{
 		return isset(self::$value[0]) ? self::$value[0] : $default;
 	}
 	/**
 	 * オプション値を配列として取得
-	 * @param string $name
-	 * @return multitype:
 	 */
-	public static function opts($name){
+	public static function opts(string $name){
 		return array_key_exists($name,self::$opt) ? self::$opt[$name] : [];
 	}
 	/**
 	 * 引数を全て取得
-	 * @return multitype:
 	 */
 	public static function values(){
 		return self::$value;

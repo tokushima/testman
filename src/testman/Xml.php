@@ -4,17 +4,17 @@ namespace testman;
  * XMLを処理する
  */
 class Xml implements \IteratorAggregate{
-	private $attr = [];
-	private $plain_attr = [];
-	private $name;
-	private $value;
-	private $close_empty = true;
+	private array $attr = [];
+	private array $plain_attr = [];
+	private ?string $name;
+	private ?string $value;
+	private bool $close_empty = true;
 
-	private $plain;
-	private $pos;
-	private $esc = true;
+	private string $plain;
+	private int $pos;
+	private bool $esc = true;
 
-	public function __construct($name=null,$value=null){
+	public function __construct(?string $name=null, ?string $value=null){
 		if($value === null && is_object($name)){
 			$n = explode('\\',get_class($name));
 			$this->name = array_pop($n);
@@ -33,44 +33,38 @@ class Xml implements \IteratorAggregate{
 	}
 	/**
 	 * 値が無い場合は閉じを省略する
-	 * @param boolean
-	 * @return boolean
 	 */
-	public function close_empty(){
+	public function close_empty(): bool{
 		if(func_num_args() > 0) $this->close_empty = (boolean)func_get_arg(0);
 		return $this->close_empty;
 	}
 	/**
 	 * エスケープするか
-	 * @param boolean $bool
 	 */
-	public function escape($bool){
-		$this->esc = (boolean)$bool;
+	public function escape(bool $bool){
+		$this->esc = $bool;
 		return $this;
 	}
 	/**
 	 * setできた文字列
-	 * @return string
 	 */
-	public function plain(){
+	public function plain(): string{
 		return $this->plain;
 	}
 	/**
 	 * 子要素検索時のカーソル
-	 * @return integer
 	 */
-	public function cur(){
+	public function cur(): int{
 		return $this->pos;
 	}
 	/**
 	 * 要素名
-	 * @return string
 	 */
-	public function name($name=null){
+	public function name(?string $name=null): string{
 		if(isset($name)) $this->name = $name;
 		return $this->name;
 	}
-	private function get_value($v){
+	private function get_value($v): ?string{
 		if($v instanceof self){
 			$v = $v->get();
 		}else if(is_bool($v)){
@@ -97,11 +91,8 @@ class Xml implements \IteratorAggregate{
 	}
 	/**
 	 * 値を設定、取得する
-	 * @param mixed
-	 * @param boolean
-	 * @return string
 	 */
-	public function value(){
+	public function value(): ?string{
 		if(func_num_args() > 0){
 			$this->value = $this->get_value(func_get_arg(0));
 		}
@@ -113,9 +104,8 @@ class Xml implements \IteratorAggregate{
 	/**
 	 * 値を追加する
 	 * ２つ目のパラメータがあるとアトリビュートの追加となる
-	 * @param mixed $arg
 	 */
-	public function add($arg){
+	public function add($arg): self{
 		if(func_num_args() == 2){
 			$this->attr(func_get_arg(0),func_get_arg(1));
 		}else{
@@ -127,16 +117,15 @@ class Xml implements \IteratorAggregate{
 	 * アトリビュートを取得する
 	 * @param string $n 取得するアトリビュート名
 	 * @param string $d アトリビュートが存在しない場合の代替値
-	 * @return string
 	 */
-	public function in_attr($n,$d=null){
+	public function in_attr(string $n, ?string $d=null): ?string{
 		return isset($this->attr[strtolower($n)]) ? ($this->esc ? htmlentities($this->attr[strtolower($n)],ENT_QUOTES,'UTF-8') : $this->attr[strtolower($n)]) : (isset($d) ? (string)$d : null);
 	}
 	/**
 	 * アトリビュートから削除する
 	 * パラメータが一つも無ければ全件削除
 	 */
-	public function rm_attr(){
+	public function rm_attr(): void{
 		if(func_num_args() === 0){
 			$this->attr = [];
 		}else{
@@ -145,31 +134,27 @@ class Xml implements \IteratorAggregate{
 	}
 	/**
 	 * アトリビュートがあるか
-	 * @param string $name
-	 * @return boolean
 	 */
-	public function is_attr($name){
+	public function is_attr(string $name): bool{
 		return array_key_exists($name,$this->attr);
 	}
 	/**
 	 * アトリビュートを設定
-	 * @return self $this
 	 */
-	public function attr($key,$value){
+	public function attr(string $key, ?string $value): self{
 		$this->attr[strtolower($key)] = is_bool($value) ? (($value) ? 'true' : 'false') : $value;
 		return $this;
 	}
 	/**
 	 * 値の無いアトリビュートを設定
-	 * @param string $v
 	 */
-	public function plain_attr($v){
+	public function plain_attr(string $v){
 		$this->plain_attr[] = $v;
 	}
 	/**
 	 * XML文字列を返す
 	 */
-	public function get($encoding=null){
+	public function get(?string $encoding=''){
 		if($this->name === null) throw new \LogicException('undef name');
 		$attr = '';
 		$value = ($this->value === null || $this->value === '') ? null : (string)$this->value;
@@ -187,12 +172,8 @@ class Xml implements \IteratorAggregate{
 	}
 	/**
 	 * 検索する
-	 * @param string $name
-	 * @param integer $offset
-	 * @param integer $length
-	 * @return \testman\XmlIterator
 	 */
-	public function find($path=null,$offset=0,$length=0){
+	public function find(string $path='', int $offset=0, int $length=0): \testman\XmlIterator{
 		if(is_string($path) && strpos($path,'/') !== false){
 			list($name,$path) = explode('/',$path,2);
 			
@@ -213,12 +194,8 @@ class Xml implements \IteratorAggregate{
 	}
 	/**
 	 * 対象の件数
-	 * @param string $name
-	 * @param integer $offset
-	 * @param integer $length
-	 * @return number
 	 */
-	public function find_count($name,$offset=0,$length=0){
+	public function find_count(string $name, int $offset=0, int $length=0): int{
 		$cnt = 0;
 			
 		foreach($this->find($name,$offset,$length) as $x){
@@ -228,12 +205,8 @@ class Xml implements \IteratorAggregate{
 	}
 	/**
 	 * １件取得する
-	 * @param string $name
-	 * @param integer $offset
-	 * @throws \testman\NotFoundException
-	 * @return \testman\Xml
 	 */
-	public function find_get($name,$offset=0){
+	public function find_get(string $name, int $offset=0): self{
 		foreach($this->find($name,$offset,1) as $x){
 			return $x;
 		}
@@ -242,7 +215,6 @@ class Xml implements \IteratorAggregate{
 	
 	/**
 	 * 子要素を展開する
-	 * @return mixed{}
 	 */
 	public function children(){
 		$children = $arr = [];
@@ -278,10 +250,8 @@ class Xml implements \IteratorAggregate{
 	
 	/**
 	 * 匿名タグとしてインスタンス生成
-	 * @param string $value
-	 * @return \testman\Xml
 	 */
-	public static function anonymous($value){
+	public static function anonymous(string $value): \testman\Xml{
 		$xml = new self('XML'.uniqid());
 		$xml->escape(false);
 		$xml->value($value);
@@ -290,12 +260,8 @@ class Xml implements \IteratorAggregate{
 	}
 	/**
 	 * タグの検出
-	 * @param string $plain
-	 * @param string $name
-	 * @throws \testman\NotFoundException
-	 * @return \testman\Xml
 	 */
-	public static function extract($plain,$name=null){
+	public static function extract(?string $plain, ?string $name=''): self{
 		if(!empty($name)){
 			$names = explode('/',$name,2);
 			$name = $names[0];
@@ -313,7 +279,7 @@ class Xml implements \IteratorAggregate{
 		}
 		throw new \testman\NotFoundException($name.' not found');
 	}
-	static private function find_extract(&$x,$plain,$name=null,$vtag=null){
+	static private function find_extract(?self &$x, ?string $plain, ?string $name=null, string $vtag=''){
 		$plain = (string)$plain;
 		$name = (string)$name;
 		if(empty($name) && preg_match("/<([\w\:\-]+)[\s][^>]*?>|<([\w\:\-]+)>/is",$plain,$m)){

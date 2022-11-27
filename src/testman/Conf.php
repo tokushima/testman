@@ -2,23 +2,18 @@
 namespace testman;
 
 class Conf{
-	static private $conf = [];
+	static private array $conf = [];
 
 	/**
 	 * セット
-	 * @param string $k
-	 * @param mixed $v
 	*/
-	public static function set($k,$v){
+	public static function set(string $k, $v): void{
 		self::$conf[$k] = $v;
 	}
 	/**
 	 * ゲット
-	 * @param string $name
-	 * @param mixed $default
-	 * @return mixed
 	 */
-	public static function get($name,$default=null){
+	public static function get(string $name, $default=null){
 		if(isset(self::$conf[$name])){
 			return self::$conf[$name];
 		}
@@ -26,19 +21,14 @@ class Conf{
 	}
 	/**
 	 * セットされているか
-	 * @param string $name
-	 * @return boolean
 	 */
-	public static function has($name){
+	public static function has(string $name): bool{
 		return array_key_exists($name,self::$conf);
 	}
 	/**
 	 * 設定ファイルのパス
-	 * @param string $name
-	 * @throws \InvalidArgumentException
-	 * @return string
 	 */
-	public static function settings_path($name){
+	public static function settings_path(string $name): string{
 		$d = debug_backtrace(false);
 		$d = array_pop($d);
 		$dir = str_replace('phar://','',dirname($d['file']));
@@ -50,10 +40,8 @@ class Conf{
 	}
 	/**
 	 * 設定ファイル/ディレクトリが存在するか
-	 * @param string $name
-	 * @return boolean
 	 */
-	public static function has_settings($name){
+	public static function has_settings(string $name): ?string{
 		try{
 			$path = self::settings_path('testman.'.$name);
 			return (is_file($path) || is_dir($path) ? $path : null);

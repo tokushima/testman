@@ -3,32 +3,37 @@ namespace testman;
 
 class XmlIterator implements \Iterator{
 	private $name = null;
-	private $plain = null;
-	private $tag = null;
-	private $offset = 0;
-	private $length = 0;
-	private $count = 0;
+	private ?string $plain = null;
+	private ?\testman\Xml $tag = null;
+	private int $offset = 0;
+	private int $length = 0;
+	private int $count = 0;
 
-	public function __construct($tag_name,$value,$offset,$length){
+	public function __construct(string $tag_name, ?string $value, int $offset, int $length){
 		$this->name = $tag_name;
 		$this->plain = $value;
 		$this->offset = $offset;
 		$this->length = $length;
 		$this->count = 0;
 	}
-	public function key(): mixed{
+
+	#[\ReturnTypeWillChange]
+	public function key(){
 		$this->tag->name();
 	}
-	public function current(): mixed{
+
+	#[\ReturnTypeWillChange]
+	public function current(){
 		$this->plain = substr($this->plain,0,$this->tag->cur()).substr($this->plain,$this->tag->cur() + strlen($this->tag->plain()));
 		$this->count++;
 		return $this->tag;
 	}
+
 	public function valid(): bool{
 		if($this->length > 0 && ($this->offset + $this->length) <= $this->count){
 			return false;
 		}
-		if(is_string($this->name) && strpos($this->name,'|') !== false){
+		if(!empty($this->name) && is_string($this->name) && strpos($this->name,'|') !== false){
 			$this->name = explode('|',$this->name);
 		}
 		if(is_array($this->name)){
