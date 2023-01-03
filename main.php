@@ -1,50 +1,11 @@
 <?php
-// coverage client
-if(php_sapi_name() !== 'cli'){
-	$linkkey = \testman\Coverage::link();
-
-	if(isset($_POST[$linkkey]) || isset($_GET[$linkkey])){
-		$linkvars = isset($_POST[$linkkey]) ? $_POST[$linkkey] : (isset($_GET[$linkkey]) ? $_GET[$linkkey] : []);
-		if(isset($_POST[$linkkey])){
-			unset($_POST[$linkkey]);
-		}
-		if(isset($_GET[$linkkey])){
-			unset($_GET[$linkkey]);
-		}
-		if(function_exists('xdebug_get_code_coverage') && isset($linkvars['coverage_data_file'])){
-			register_shutdown_function(function() use($linkvars){
-				register_shutdown_function(function() use($linkvars){
-					$db = $linkvars['coverage_data_file'];
-					$target_list_db = $db.'.target';
-					$tmp_db = $db.'.tmp';
-
-					if(is_file($target_list_db)){
-						$target_list = explode(PHP_EOL,file_get_contents($target_list_db));
-						$fp = fopen($tmp_db,'a');
-
-						foreach(xdebug_get_code_coverage() as $file_path => $lines){
-							if(false !== ($i = array_search($file_path,$target_list))){
-								fwrite($fp,json_encode([$i,$lines]).PHP_EOL);
-							}
-						}
-						fclose($fp);
-					}
-					xdebug_stop_code_coverage();
-				});
-			});
-			xdebug_start_code_coverage();
-		}
-	}
-	return;
-}
-
 if(!function_exists('fail')){
 	/**
 	 * 失敗とする
 	 * @param string $msg 失敗時メッセージ
 	 * @throws \testman\AssertFailure
 	 */
-	function fail($msg='failure'){
+	function fail(string $msg='failure'){
 		throw new \testman\AssertFailure($msg);
 	}
 }
@@ -127,11 +88,7 @@ if(!function_exists('mneq')){
 }
 
 if(!function_exists('b')){
-	/**
-	 * ブラウザを返す
-	 * @return \testman\Browser
-	 */
-	function b(){
+	function b(): \testman\Browser{
 		return new \testman\Browser();
 	}
 }
@@ -155,13 +112,6 @@ if(is_file($f=getcwd().'/bootstrap.php') || is_file($f=getcwd().'/vendor/autoloa
 	ob_end_clean();
 }
 
-if(\testman\Args::has_opt('coverage')){
-	$v = \testman\Args::opt('coverage');
-	\testman\Conf::set('coverage',(is_bool($v) ? 'coverage.xml' : $v));
-}
-if(($v = \testman\Args::opt('output')) !== null && !is_bool($v)){
-	\testman\Conf::set('output',$v);
-}
 \testman\Std::println('testman (PHP '.phpversion().')');
 \testman\Std::println();
 
@@ -169,62 +119,12 @@ if(\testman\Args::opt('help')){
 	\testman\Std::println_info('Usage: php '.basename(__FILE__).' [options] [dir/ | dir/file.php]');
 	\testman\Std::println();
 	\testman\Std::println_primary('Options:');
-	\testman\Std::println('  --coverage <coverage file> Generate code coverage report in XML format');
-	\testman\Std::println('  --benchmark <benchmark file> Generate benchmark report');
-	\testman\Std::println('  --output <file>   Log test execution in XML format to file');
-	\testman\Std::println('  --nobs            Disabeld Std.bs(back space print)');
 	\testman\Std::println();
 	\testman\Std::println('  --list [keyword]  List test files');
 	\testman\Std::println('  --info            Info setup[s]');
-	\testman\Std::println('  --init            Create init files');
-	\testman\Std::println('  --coverd <coverage file> View coverage report');
 	\testman\Std::println();
 }else if(($keyword = \testman\Args::opt('list',false)) !== false || ($keyword = \testman\Args::opt('l',false)) !== false){
 	\testman\Finder::summary_list($testdir,$keyword);
-}else if((\testman\Args::opt('init',false)) !== false){
-	$newfile = function($file,$source){
-		$fp = \testman\Conf::settings_path($file);
-			
-		if(!is_file($fp)){
-			file_put_contents($fp,'<?php'.PHP_EOL.$source);
-			\testman\Std::println_info('Written '.$fp);
-		}
-	};
-	$newfile('testman.settings.php', <<< '_SRC_'
-// テスト用の設定をします
-// \testman\Conf::set('urls',\ebi\Dt::get_urls());
-// \testman\Conf::set('output',dirname(__DIR__).'/work/result.xml');
-// \testman\Conf::set('ssl-verify',false);
-_SRC_
-	);
-	$newfile('testman.fixture.php',<<< '_SRC_'
-// テスト用の初期データを作成します
-// \ebi\Dt::setup();
-_SRC_
-	);
-	$newfile('__setup__.php',<<< '_SRC_'
-// テスト毎の開始処理
-// \ebi\Exceptions::clear();
-_SRC_
-	);
-	$newfile('__teardown__.php',<<< '_SRC_'
-// テスト毎の終了処理
-
-_SRC_
-	);
-
-	if(!is_dir($dir=\testman\Conf::settings_path('testman.lib'))){
-		mkdir($dir,0755,true);
-		\testman\Std::println_info('Create '.$dir);
-		
-		$newfile('testman.lib/Util.php',<<< '_SRC_'
-namespace test; // namespaceはtestから始まる
-
-class Util{
-}
-_SRC_
-		);
-	}
 }else if(($p=\testman\Args::opt('info',false)) !== false || ($p=\testman\Args::opt('i',false)) !== false){
 	if($p === true){
 		$p = \testman\Args::value();
@@ -234,22 +134,8 @@ _SRC_
 		}
 	}
 	\testman\Finder::setup_info($p);
-}else if(($covered_file = \testman\Args::opt('covered',false)) !== false){
-	try{
-		$create_date = \testman\Coverage::load($covered_file);
-		$source = \testman\Args::opt('source');
-
-		if(is_file($source)){
-			\testman\Coverage::output_source($source,$create_date);
-		}else{
-			\testman\Coverage::output(false);
-		}
-	}catch(\Exception $e){
-		\testman\Std::println_danger($e->getMessage());
-	}
 }else{
 	try{
-		\testman\Conf::set('stdbs',!\testman\Args::opt('nobs',false));
 		\testman\Runner::start($testdir);
 	}catch(\Exception $e){
 		\testman\Std::println_danger(PHP_EOL.get_class($e).': '.$e->getMessage().PHP_EOL.PHP_EOL.$e->getTraceAsString());

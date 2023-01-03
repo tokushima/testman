@@ -6,16 +6,12 @@ class Runner{
 	private static string $current_test;
 	private static bool $start = false;
 	private static array $vars = [];
-	private static array $benchmark = [];
 
 	/**
 	 * 現在実行しているテスト
 	*/
 	public static function current(): string{
 		return self::$current_test;
-	}
-	public static function benchmark(): array{
-		return self::$benchmark;
 	}
 
 	private static function trim_msg(string $msg, int $len): string{
@@ -93,27 +89,7 @@ class Runner{
 					return false;
 				},true,false);
 			}
-				
-			$coverage = \testman\Conf::get('coverage');
-				
-			if(isset($coverage)){
-				if(empty($coverage)){
-					$coverage = 'coverage.xml';
-				}
-				$coverage_taget_dir = \testman\Conf::get('coverage-dir',getcwd().'/lib');
-				$coverage_taget_dir_real = realpath($coverage_taget_dir);
-			
-				if($coverage_taget_dir_real === false){
-					throw new \testman\NotFoundException('Coverage target not found: '.$coverage_taget_dir);
-				}
-				if(\testman\Coverage::start($coverage,$coverage_taget_dir)){
-					$msg = 'Coverage: '.$coverage_taget_dir_real;
-					\testman\Std::println($msg,'36');
-					$is_head_print = true;
-				}
-			}
-			\testman\Benchmark::init();
-			
+
 			$testdir = realpath($testdir);
 			$success = $fail = $exception = $exe_time = $use_memory = 0;
 			
@@ -142,33 +118,27 @@ class Runner{
 				$cnt++;
 
 				$msg = 'Running.. ('.($cnt.'/'.$testcnt).') '.(
-					(
-						(\testman\Conf::get('stdbs',true) === false) ?
-							\testman\Runner::short_name($test_path) :
-							self::trim_msg(\testman\Runner::short_name($test_path),80)
-					).' '
+					self::trim_msg(\testman\Runner::short_name($test_path),80).' '
 				);
 				\testman\Std::p($msg,33);
 				list($test_name,$res) = \testman\Runner::exec($test_path);
 				\testman\Std::bs(strlen($msg));
 				
-				if(\testman\Conf::get('stdbs',true) === true){
-					if($res[0] != 1){
-						if($ey == 0){
-							$ey = 2;
-							
-							$msg = 'Failure:';
-							\testman\Std::cur($ey,0);
-							\testman\Std::p($msg,31);
-							\testman\Std::cur($ey*-1,strlen($msg) * -1);
-						}
-						$ey++;
-	
-						$msg = '  '.self::trim_msg($test_name,80).':'.$res[3];
+				if($res[0] != 1){
+					if($ey == 0){
+						$ey = 2;
+						
+						$msg = 'Failure:';
 						\testman\Std::cur($ey,0);
-						\testman\Std::p($msg.PHP_EOL.PHP_EOL.PHP_EOL,31);
-						\testman\Std::cur(($ey + 3) * -1,strlen($msg) * -1);
+						\testman\Std::p($msg,31);
+						\testman\Std::cur($ey*-1,strlen($msg) * -1);
 					}
+					$ey++;
+
+					$msg = '  '.self::trim_msg($test_name,80).':'.$res[3];
+					\testman\Std::cur($ey,0);
+					\testman\Std::p($msg.PHP_EOL.PHP_EOL.PHP_EOL,31);
+					\testman\Std::cur(($ey + 3) * -1,strlen($msg) * -1);
 				}
 			}
 			if($ey > 0){
@@ -241,116 +211,12 @@ class Runner{
 			\testman\Std::println(str_repeat('=',80));
 			\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
 			\testman\Std::println();
-
-			if(\testman\Conf::has('output')){
-				\testman\Std::println_primary('Written Result:   '.self::output(\testman\Conf::get('output')).' ');
-			}
-			if(\testman\Coverage::stop()){
-				\testman\Coverage::output(true);
-			}
-			\testman\Std::println();
-			
-			if(!empty(\testman\Benchmark::is_running())){
-				\testman\Benchmark::write();
-				\testman\Std::println_primary(' Written Benchmark: '.\testman\Benchmark::save_path());
-			}
 		}catch(\Exception $e){
 			\testman\Std::println_danger(PHP_EOL.PHP_EOL.'Failure:'.PHP_EOL.PHP_EOL.$e->getMessage().PHP_EOL.$e->getTraceAsString());
 		}
 		return self::$resultset;
 	}
-
-	private static function output(string $output): string{
-		if(!is_dir(dirname($output))){
-			mkdir(dirname($output),0777,true);
-		}
-		$xml = new \SimpleXMLElement('<testsuites></testsuites>');
-		$get_testsuite = function($dir,&$testsuite) use($xml){
-			if(empty($testsuite)){
-				$testsuite = $xml->addChild('testsuite');
-				$testsuite->addAttribute('name',$dir);
-			}
-			return $testsuite;
-		};
-
-		$list = [];
-		foreach(self::$resultset as $file => $info){
-			$list[dirname($file)][basename($file)] = $info;
-		}
-		$errors = $failures = $times = 0;
-		foreach($list as $dir => $files){
-			$testsuite = null;
-			$dir_time = $dir_failures = $dir_errors = 0;
-
-			foreach($files as $file => $info){
-				switch($info[0]){
-					case 1:
-						list(,$time) = $info;
-						$x = $get_testsuite($dir,$testsuite)->addChild('testcase');
-						$x->addAttribute('name',basename($file));
-						$x->addAttribute('time',$time);
-
-						$dir_time += $time;
-						break;
-					case -1:
-						list(,$time,$file,$line,$msg,$r1,$r2,$has) = $info;
-						$dir_failures++;
-
-						$x = $get_testsuite($dir,$testsuite)->addChild('testcase');
-						$x->addAttribute('name',basename($file));
-						$x->addAttribute('time',$time);
-						$x->addAttribute('line',$line);
-
-						if($has){
-							ob_start();
-							var_dump($r2);
-							$failure_value = 'Line. '.$line.': '."\n".ob_get_clean();
-							$failure = dom_import_simplexml($x->addChild('failure'));
-							$failure->appendChild($failure->ownerDocument->createCDATASection($failure_value));
-						}
-						$dir_time += $time;
-						break;
-					case -2:
-						list(,$time,$file,$line,$msg) = $info;
-						$dir_errors++;
-
-						$x = $get_testsuite($dir,$testsuite)->addChild('testcase');
-						$x->addAttribute('name',basename($file));
-						$x->addAttribute('time',$time);
-						$x->addAttribute('line',$line);
-
-						$error_value = 'Line. '.$line.': '.$msg;
-						$error = $x->addChild('error');
-						$error->addAttribute('line',$line);
-						$error_node = dom_import_simplexml($error);
-						$error_node->appendChild($error_node->ownerDocument->createCDATASection($error_value));
-
-						$dir_time += $time;
-						break;
-				}
-			}
-			if(!empty($testsuite)){
-				$testsuite->addAttribute('tests',sizeof($files));
-				$testsuite->addAttribute('failures',$dir_failures);
-				$testsuite->addAttribute('errors',$dir_errors);
-				$testsuite->addAttribute('time',$dir_time);
-			}
-			$failures += $dir_failures;
-			$errors += $dir_errors;
-			$times += $dir_time;
-		}
-		$xml->addAttribute('tests',sizeof(self::$resultset));
-		$xml->addAttribute('failures',$failures);
-		$xml->addAttribute('errors',$errors);
-		$xml->addAttribute('time',$times);
-		$xml->addAttribute('create_date',date('Y/m/d H:i:s'));
-		$xml->addChild('system-out');
-		$xml->addChild('system-err');
-
-		file_put_contents($output,$xml->asXML());
-
-		return realpath($output);
-	}
+	
 	private static function vars_type_validation(string $type, string $name, $var): void{
 		$is_a = false;
 		if(substr($type,-2) == '[]'){
@@ -426,8 +292,6 @@ class Runner{
 		self::$vars = [];
 		self::$current_test = $test_file;
 
-		\testman\Benchmark::start();
-	
 		try{
 			ob_start();
 			self::exec_setup_teardown($test_file,true);
@@ -467,9 +331,7 @@ class Runner{
 		}
 		$test_name = self::short_name($test_file);
 		self::exec_setup_teardown($test_file,false);
-		
-		\testman\Benchmark::stop($test_name);
-		
+				
 		self::$resultset[$test_name] = $res;
 		return [$test_name,$res];
 	}

@@ -47,16 +47,12 @@ class Std{
 	 * BackSpace
 	 */
 	public static function bs(int $num=0): void{
-		if(\testman\Conf::get('stdbs',true) === false){
-			print(PHP_EOL);
+		if(empty($num)){
+			print("\033[2K");
 		}else{
-			if(empty($num)){
-				print("\033[2K");
-			}else{
-				self::cur(0,$num*-1);
-				print(str_repeat(' ',$num));
-				self::cur(0,$num*-1);
-			}
+			self::cur(0,$num*-1);
+			print(str_repeat(' ',$num));
+			self::cur(0,$num*-1);
 		}
 	}
 	/**

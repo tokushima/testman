@@ -12,7 +12,7 @@ class Browser{
 	private array $request_vars = [];
 	private array $request_file_vars = [];
 	private string $head;
-	private string $body;
+	private string $body = '';
 	private array $cookie = [];
 	private string $url;
 	private int $status;
@@ -20,12 +20,17 @@ class Browser{
 	private ?string $user;
 	private ?string $password;
 	private ?string $bearer_token;
+
+	private ?array $proxy;
+	private bool $ssl_verify = true;
 	
 	private string $raw;
 	
 	private static bool $recording_request = false;
 	private static array $record_request = [];
 	
+	private static $rewrite = [];
+
 	public function __construct(?string $agent=null, int $timeout=30, int $redirect_max=20){
 		$this->agent = $agent;
 		$this->timeout = (int)$timeout;
@@ -274,6 +279,21 @@ class Browser{
 		return self::$record_request;
 	}
 
+	private static function url_rewrite(string $url): string{
+		$url_rewrite = \testman\Conf::get('url_rewrite', []);
+		
+		if(!empty($url_rewrite)){
+			foreach($url_rewrite as $pattern => $replacement){
+				if(!empty($pattern) && preg_match($pattern, $url)){
+					$url = preg_replace($pattern, $replacement, $url);
+					$url = \testman\Util::url($url);
+					break;
+				}
+			}
+		}
+		return $url;
+	}
+
 	/**
 	 * @param string|array $url
 	 */
@@ -283,18 +303,11 @@ class Browser{
 		}
 		
 		$url = \testman\Util::url($url);
+		$url = self::url_rewrite($url);
+
 		$url_info = parse_url($url);
 		$cookie_base_domain = (isset($url_info['host']) ? $url_info['host'] : '').(isset($url_info['path']) ? $url_info['path'] : '');
 
-		// set coverage query
-		if(\testman\Coverage::has_link($vars)){
-			foreach(\testman\Conf::get('urls',[]) as $u){
-				if(preg_match('/'.str_replace('%s','.+',preg_quote($u,'/')).'/',$url)){
-					$this->request_vars[\testman\Coverage::link()] = $vars;
-					break;
-				}
-			}
-		}
 		switch($method){
 			case 'RAW':
 			case 'POST': curl_setopt($this->resource,CURLOPT_POST,true); break;
@@ -363,6 +376,22 @@ class Browser{
 		if(self::$recording_request){
 			curl_setopt($this->resource,CURLINFO_HEADER_OUT,true);
 		}
+
+		/**
+		 * @param bool $ssl_verify SSL証明書を確認するかの真偽値
+		 */
+		if($this->ssl_verify === false || \testman\Conf::get('ssl-verify',true) === false){
+			curl_setopt($this->resource, CURLOPT_SSL_VERIFYHOST,false);
+			curl_setopt($this->resource, CURLOPT_SSL_VERIFYPEER,false);
+		}
+		if(!empty($this->proxy)){
+			curl_setopt($this->resource,CURLOPT_HTTPPROXYTUNNEL,true);
+			curl_setopt($this->resource,CURLOPT_PROXY,$this->proxy[0]);
+			
+			if(!empty($this->proxy[1] ?? null)){
+				curl_setopt($this->resource,CURLOPT_PROXYPORT,$this->proxy[1]);
+			}
+		}		
 		if(!empty($this->user)){
 			curl_setopt($this->resource,CURLOPT_USERPWD,$this->user.':'.$this->password);
 		}else if(!empty($this->bearer_token)){
@@ -443,23 +472,7 @@ class Browser{
 		if(self::$recording_request){
 			self::$record_request[] = curl_getinfo($this->resource,CURLINFO_HEADER_OUT);
 		}
-		
-		// remove coverage query
-		if(strpos($this->url,'?') !== false){
-			list($url,$query) = explode('?',$this->url,2);
-			if(!empty($query)){
-				parse_str($query,$vars);
 				
-				if(array_key_exists(\testman\Coverage::link(),$vars)){
-					unset($vars[\testman\Coverage::link()]);
-				}
-				if(!empty($vars)){
-					$url = $url.'?'.http_build_query($vars);
-				}
-			}
-			$this->url = $url;
-		}
-		
 		if(preg_match_all('/Set-Cookie:[\s]*(.+)/i',$this->head,$match)){
 			foreach($match[1] as $cookies){
 				$cookie_name = $cookie_value = $cookie_domain = $cookie_path = $cookie_expires = null;

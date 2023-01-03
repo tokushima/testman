@@ -1,6 +1,8 @@
 <?php
 namespace testman;
-
+/**
+ * XMLクラスのイテレータ
+ */
 class XmlIterator implements \Iterator{
 	private $name = null;
 	private ?string $plain = null;
@@ -9,7 +11,7 @@ class XmlIterator implements \Iterator{
 	private int $length = 0;
 	private int $count = 0;
 
-	public function __construct(string $tag_name, ?string $value, int $offset, int $length){
+	public function __construct($tag_name,$value,$offset,$length){
 		$this->name = $tag_name;
 		$this->plain = $value;
 		$this->offset = $offset;
@@ -19,7 +21,7 @@ class XmlIterator implements \Iterator{
 
 	#[\ReturnTypeWillChange]
 	public function key(){
-		$this->tag->name();
+		return $this->tag->name();
 	}
 
 	#[\ReturnTypeWillChange]
@@ -28,12 +30,11 @@ class XmlIterator implements \Iterator{
 		$this->count++;
 		return $this->tag;
 	}
-
 	public function valid(): bool{
 		if($this->length > 0 && ($this->offset + $this->length) <= $this->count){
 			return false;
 		}
-		if(!empty($this->name) && is_string($this->name) && strpos($this->name,'|') !== false){
+		if(is_string($this->name) && strpos($this->name,'|') !== false){
 			$this->name = explode('|',$this->name);
 		}
 		if(is_array($this->name)){
