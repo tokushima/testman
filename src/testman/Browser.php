@@ -285,9 +285,10 @@ class Browser{
 		if(!empty($url_rewrite)){
 			foreach($url_rewrite as $pattern => $replacement){
 				if(!empty($pattern) && preg_match($pattern, $url)){
-					$url = preg_replace($pattern, $replacement, $url);
-					$url = \testman\Util::url($url);
-					break;
+					$new_url = preg_replace($pattern, $replacement, $url);
+					$new_url = \testman\Util::url($new_url);
+					\testman\Conf::log_debug_callback('URL rewrite (testman): '.$url.' to '.$new_url);
+					return $new_url;
 				}
 			}
 		}

@@ -34,4 +34,10 @@ class Conf{
 		return $dir.'/'.$name;
 	}
 
+	public static function log_debug_callback(string $message): void{
+		$log_debug_callback = self::get('log_debug_callback');
+		if(is_callable($log_debug_callback)){
+			call_user_func_array($log_debug_callback, [$message]);
+		}
+	}
 }

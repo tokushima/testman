@@ -291,6 +291,7 @@ class Runner{
 	private static function exec(string $test_file): array{
 		self::$vars = [];
 		self::$current_test = $test_file;
+		$res = null;
 
 		try{
 			ob_start();
@@ -314,6 +315,11 @@ class Runner{
 			list($debug) = $e->getTrace();
 			$res = [-1,0,$debug['file'],$debug['line'],$e->getMessage(),$e->expectation(),$e->result(),$e->has()];
 			ob_end_clean();
+		}catch(\testman\DefinedVarsRequireException $e){
+			list($debug) = $e->getTrace();
+			if(!isset($res) && $debug['file'] === __FILE__ && isset($debug['args'][1]['path'])){
+				$res = [-2, 0, $debug['args'][1]['path'], 0, ((string)$e)];				
+			}
 		}catch(\Exception $e){
 			$trace = $e->getTrace();
 			$root = preg_replace('/^phar:\/\/(.+\.phar)\/src\/testman\/.+$/','\\1',__FILE__);
