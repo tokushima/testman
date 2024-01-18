@@ -64,7 +64,7 @@ class Runner{
 				\testman\Std::println();
 			}
 			\testman\Std::cur(-5,0);
-						
+			
 			$is_head_print = false;
 			if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
 				$msg = 'Settings: '.$f;
@@ -209,7 +209,7 @@ class Runner{
 				}
 			}
 			\testman\Std::println(str_repeat('=',80));
-			\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%.05f sec / %s MByte)',$success,$fail,$exception,$exe_time,$use_memory));
+			\testman\Std::println_info(sprintf('success %d, failures %d, errors %d (%s- / %.05f sec / %s MByte)',$success,$fail,$exception,date('Y-m-d H:i:s', (int)$start_time), $exe_time,$use_memory));
 			\testman\Std::println();
 		}catch(\Exception $e){
 			\testman\Std::println_danger(PHP_EOL.PHP_EOL.'Failure:'.PHP_EOL.PHP_EOL.$e->getMessage().PHP_EOL.$e->getTraceAsString());
