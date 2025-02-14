@@ -286,11 +286,10 @@ class Browser{
 			[$base_url, $query] = (strpos($url, '?') === false) ? [$url, ''] : explode('?', $url, 2);
 
 			foreach($url_rewrite as $pattern => $replacement){
-				if(strpos($pattern, '\?') !== false){
-					$base_url = $url;
-				}
-				if(!empty($pattern) && preg_match($pattern, $base_url)){
-					$new_url = preg_replace($pattern, $replacement, $base_url);
+				$subject = (strpos($pattern, '\?') === false) ? $base_url : $url;
+
+				if(!empty($pattern) && preg_match($pattern, $subject)){
+					$new_url = preg_replace($pattern, $replacement, $subject);
 					$new_url = \testman\Util::url($new_url).(empty($query) ? '' : '?'.$query);
 					\testman\Conf::log_debug_callback('URL rewrite (testman): '.$url.' to '.$new_url);
 					return $new_url;
