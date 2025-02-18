@@ -48,19 +48,15 @@ class Util{
 	
 	/**
 	 * MAPに従いURLを返す
-	 * @param string|array $url
 	 */
-	public static function url($url): string{
-		if(is_array($url) || strpos($url,'://') === false){
-			$urls = \testman\Conf::get('urls',[]);
-			$url_args = [];
-			
-			if(is_array($url)){
-				$url_args = $url;
-				$url = array_shift($url_args);
-			}
-			if(!empty($urls) && isset($urls[$url]) && substr_count($urls[$url],'%s') == sizeof($url_args)){
-				$url = vsprintf($urls[$url],$url_args);
+	public static function url(string|array $url): string{
+		[$url, $params] = is_array($url) ? [$url[0], array_slice($url, 1)] : [$url, []];
+
+		if(strpos($url, '://') === false){
+			$map_urls = \testman\Conf::get('urls',[]);
+
+			if(!empty($map_urls) && isset($map_urls[$url]) && substr_count($map_urls[$url], '%s') == sizeof($params)){
+				return vsprintf($map_urls[$url], $params);
 			}
 		}
 		return $url;

@@ -280,18 +280,36 @@ class Browser{
 	}
 
 	private static function url_rewrite(string $url): string{
-		$url_rewrite = \testman\Conf::get('url_rewrite', []);
+		$rewrite = \testman\Conf::get('url_rewrite', []);
 		
-		if(!empty($url_rewrite)){
+		if(!empty($rewrite)){
 			[$base_url, $query] = (strpos($url, '?') === false) ? [$url, ''] : explode('?', $url, 2);
 
-			foreach($url_rewrite as $pattern => $replacement){
+			foreach($rewrite as $pattern => $replacement){
 				$subject = (strpos($pattern, '\?') === false) ? $base_url : $url;
 
-				if(!empty($pattern) && preg_match($pattern, $subject)){
+				if(!empty($pattern) && preg_match($pattern, $subject, $matches)){	
+					$new_url_params = [];
+
+					if(preg_match_all('/(\/%[0-9s]+)/', $replacement, $param_matches)){
+						$match_params = array_slice($matches, 1);
+
+						foreach($param_matches[0] as $i => $param_match){
+							$idx = ($param_match == 's') ? $i : (int)substr($param_match, 2);
+							$new_url_params[$idx] = $match_params[$idx] ?? '';
+
+							$replacement = str_replace($param_match, '', $replacement);
+						}
+					}
 					$new_url = preg_replace($pattern, $replacement, $subject);
-					$new_url = \testman\Util::url($new_url).(empty($query) ? '' : '?'.$query);
+					if(strpos($new_url, '?') !== false){
+						[$new_url, $new_query] = explode('?', $new_url, 2);
+						$query = $query.(empty($query) ? '' : '&').$new_query;
+					}
+					$new_url = \testman\Util::url(empty($new_url_params) ? $new_url : array_merge([$new_url], $new_url_params));
+					$new_url = $new_url.(empty($query) ? '' : ((strpos($new_url, '?') === false) ? '?' : '&').$query);
 					\testman\Conf::log_debug_callback('URL rewrite (testman): '.$url.' to '.$new_url);
+
 					return $new_url;
 				}
 			}
