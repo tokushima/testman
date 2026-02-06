@@ -1,3 +1,3 @@
 # testman
 
-(PHP >= 8.3)
+(PHP >= 7.4)

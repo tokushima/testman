@@ -2,6 +2,30 @@
 namespace testman;
 
 class Finder{
+	// setup/teardownファイルのキャッシュ
+	private static array $setup_cache = [];
+	private static array $teardown_cache = [];
+	private static ?string $cwd_cache = null;
+
+	/**
+	 * キャッシュをクリア
+	 */
+	public static function clear_cache(): void{
+		self::$setup_cache = [];
+		self::$teardown_cache = [];
+		self::$cwd_cache = null;
+	}
+
+	/**
+	 * getcwd()のキャッシュ
+	 */
+	public static function cwd(): string{
+		if(self::$cwd_cache === null){
+			self::$cwd_cache = getcwd();
+		}
+		return self::$cwd_cache;
+	}
+
 	/**
 	 * テスト対象ファイルを探す
 	 */
@@ -29,7 +53,7 @@ class Finder{
 	 * サマリ一覧
 	 */
 	public static function summary_list(string $testdir, $keyword=null): array{
-		$cwd = getcwd().DIRECTORY_SEPARATOR;
+		$cwd = self::cwd().DIRECTORY_SEPARATOR;
 
 		$summary = function($src){
 			$summary = '';
@@ -147,14 +171,28 @@ class Finder{
 	 * setup/teardownを探す
 	 */
 	public static function setup_teardown_files(string $testdir, bool $is_setup): array{
-		if(is_dir($dir=$testdir) || is_dir($dir=dirname($testdir))){
-			$file = ($is_setup) ? '__setup__.php' : '__teardown__.php';
-			$inc_list = [];
-			$var_types = [];
-			$target_dir = $dir;
+		// ディレクトリを取得
+		$target_dir = is_dir($testdir) ? $testdir : dirname($testdir);
+		if(!is_dir($target_dir)){
+			return [[], [], ''];
+		}
 
-			while(strlen($dir) >= strlen(getcwd())){
-				if(is_file($f=($dir.'/'.$file))){
+		// キャッシュキー
+		$cache_key = $target_dir;
+		$cache = $is_setup ? self::$setup_cache : self::$teardown_cache;
+
+		if(isset($cache[$cache_key])){
+			return $cache[$cache_key];
+		}
+
+		$file = $is_setup ? '__setup__.php' : '__teardown__.php';
+		$inc_list = [];
+		$var_types = [];
+		$dir = $target_dir;
+		$cwd = self::cwd();
+
+		while(strlen($dir) >= strlen($cwd)){
+			if(is_file($f = $dir.'/'.$file)){
 					$varnames = [];
 					$summary = null;
 
@@ -190,13 +228,20 @@ class Finder{
 				}
 				$dir = dirname($dir);
 			}
-			if($is_setup){
-				krsort($inc_list);
-			}
-			ksort($var_types);
-
-			return [$var_types, $inc_list, $target_dir];
+		if($is_setup){
+			krsort($inc_list);
 		}
-		return [[],[],''];
+		ksort($var_types);
+
+		$result = [$var_types, $inc_list, $target_dir];
+
+		// キャッシュに保存
+		if($is_setup){
+			self::$setup_cache[$cache_key] = $result;
+		}else{
+			self::$teardown_cache[$cache_key] = $result;
+		}
+
+		return $result;
 	}
 }

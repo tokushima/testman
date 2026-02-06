@@ -46,8 +46,8 @@ class Args{
 	/**
 	 * 引数の取得
 	 */
-	public static function value($default=null): string{
-		return isset(self::$value[0]) ? self::$value[0] : $default;
+	public static function value($default = null): ?string{
+		return self::$value[0] ?? $default;
 	}
 	/**
 	 * オプション値を配列として取得
