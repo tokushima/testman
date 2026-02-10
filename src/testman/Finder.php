@@ -201,7 +201,7 @@ class Finder{
 							
 						if(preg_match_all('/@.+/',$desc,$_as)){
 							foreach($_as[0] as $_m){
-								if(preg_match("/@var\s+([^\s]+)\s+\\$(\w+)(.*)/",$_m,$_p)){
+								if(preg_match("/@(?:var|export)\s+([^\s]+)\s+\\$(\w+)(.*)/",$_m,$_p)){
 									$var_types[$_p[2]]['rewrite'] = array_key_exists($_p[2], $var_types);
 									$var_types[$_p[2]]['path'] = $f;
 									$var_types[$_p[2]]['type'] = $_p[1];
@@ -210,7 +210,7 @@ class Finder{
 										$var_types[$_p[2]]['desc'] = trim($_p[3]);
 									}
 									$varnames[] = $_p[2];
-								}else if(preg_match("/@var\s+\\$(\w+)(.*)/",$_m,$_p)){
+								}else if(preg_match("/@(?:var|export)\s+\\$(\w+)(.*)/",$_m,$_p)){
 									$var_types[$_p[1]]['rewrite'] = array_key_exists($_p[1], $var_types);
 									$var_types[$_p[1]]['path'] = $f;
 									$var_types[$_p[1]]['type'] = 'string';
