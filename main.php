@@ -132,8 +132,9 @@ foreach($bootstrap_files as $f){
 	}
 }
 
-\testman\Std::println('testman (PHP '.phpversion().')');
-\testman\Std::println();
+$version = trim((string)@file_get_contents(__DIR__.'/version'));
+testman\Std::println('testman '.($version ? $version.' ' : '').'(PHP '.phpversion().')');
+testman\Std::println();
 
 // コマンド処理
 if(\testman\Args::opt('help')){
