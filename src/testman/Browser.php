@@ -103,6 +103,12 @@ class Browser{
 	public function set_header_accept_json(): self{
 		return $this->header('Accept','application/json');
 	}
+	/**
+	 * ACCEPTを指定しない
+	 */
+	public function set_header_accept_none(): self{
+		return $this->header('Accept','*/*');
+	}
 	
 	/**
 	 * クエリを設定
@@ -437,6 +443,9 @@ class Browser{
 		}
 		if(!isset($this->request_header['Expect'])){
 			$this->request_header['Expect'] = null;
+		}
+		if(!array_key_exists('Accept',$this->request_header) && !empty($accept = \testman\Conf::get('accept'))){
+			$this->request_header['Accept'] = $accept;
 		}
 		if(!empty($this->cookie)){
 			$cookies = '';
