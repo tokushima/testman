@@ -253,7 +253,7 @@ class Runner{
 			\testman\Std::p($progress_line);
 
 			[$test_name, $res] = self::exec($test_path);
-			\testman\Std::bs(mb_strlen($progress_line));
+			\testman\Std::bs(mb_strlen(preg_replace('/\033\[[0-9;]*m/', '', $progress_line)));
 
 			if($res[0] == 1){
 				$pass_cnt++;
