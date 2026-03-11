@@ -114,6 +114,18 @@ if(sizeof($debug) > 1 || (isset($debug[0]['file']) && substr($debug[0]['file'], 
 
 // CLI実行
 \testman\Args::init();
+
+// --stub: バナーなしで stubs を stdout に出力して終了
+if(\testman\Args::opt('stub')){
+	$stubs_path = \Phar::running() ? \Phar::running().'/src/stubs.php' : __DIR__.'/src/stubs.php';
+	if(!is_file($stubs_path)){
+		fwrite(STDERR, 'stubs.php not found: '.$stubs_path.PHP_EOL);
+		exit(1);
+	}
+	echo file_get_contents($stubs_path);
+	exit(0);
+}
+
 $testdir = realpath(\testman\Args::value(getcwd().'/test'));
 
 if($testdir === false){
@@ -145,6 +157,7 @@ if(\testman\Args::opt('help')){
 	\testman\Std::println('  --list [keyword]  List test files');
 	\testman\Std::println('  --info            Info setup[s]');
 	\testman\Std::println('  -p, --parallel N  Run tests in parallel (N workers, default: CPU cores)');
+	\testman\Std::println('  --stub      Dump IDE stubs to stdout');
 	\testman\Std::println();
 }else if(($keyword = \testman\Args::opt('list', false)) !== false || ($keyword = \testman\Args::opt('l', false)) !== false){
 	\testman\Finder::summary_list($testdir, $keyword);
