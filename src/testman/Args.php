@@ -61,4 +61,11 @@ class Args{
 	public static function values(){
 		return self::$value;
 	}
+
+	/**
+	 * 許可されたオプション以外が指定されていればその名前を返す
+	 */
+	public static function unknown_opts(array $known): array{
+		return array_diff(array_keys(self::$opt), $known);
+	}
 }

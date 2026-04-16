@@ -136,12 +136,20 @@ if(!function_exists('b')){
 
 // ライブラリとしてincludeされた場合は関数定義のみで終了
 $debug = debug_backtrace(false);
-if(sizeof($debug) > 1 || (isset($debug[0]['file']) && substr($debug[0]['file'], -5) != '.phar')){
+if(sizeof($debug) > 1 || (isset($debug[0]['file']) && substr($debug[0]['file'], -5) != '.phar' && empty(\Phar::running()))){
 	return;
 }
 
 // CLI実行
 \testman\Args::init();
+
+// 未知のオプションチェック
+$unknown = \testman\Args::unknown_opts(['stub', 'install', 'help', 'list', 'l', 'info', 'i', 'I', 'parallel', 'p', 'version']);
+if(!empty($unknown)){
+	fwrite(STDERR, 'Unknown option: --'.implode(', --', $unknown).PHP_EOL);
+	fwrite(STDERR, 'Run with --help for usage information'.PHP_EOL);
+	exit(1);
+}
 
 // --stub: バナーなしで stubs を stdout に出力して終了
 if(\testman\Args::opt('stub')){
@@ -165,8 +173,9 @@ if(\testman\Args::opt('install')){
 	if(!is_string($install_path)){
 		$install_path = '/usr/local/bin/testman';
 	}
-	$content = '#!/usr/bin/env php'.PHP_EOL.file_get_contents($phar_path);
-	if(@file_put_contents($install_path, $content) === false){
+
+	// pharを直接コピー（composer方式）
+	if(!@copy($phar_path, $install_path)){
 		fwrite(STDERR, 'Error: Permission denied. Try: sudo php '.$phar_path.' --install'.PHP_EOL);
 		exit(1);
 	}
@@ -182,6 +191,9 @@ if($testdir === false){
 	exit(1);
 }
 
+// グローバルインストール時の設定ファイル探索基準をテストディレクトリに設定
+\testman\Conf::set_base_dir(is_file($testdir) ? dirname($testdir) : $testdir);
+
 // bootstrap/autoload読み込み
 $bootstrap_files = [getcwd().'/bootstrap.php', getcwd().'/vendor/autoload.php'];
 foreach($bootstrap_files as $f){
@@ -194,6 +206,12 @@ foreach($bootstrap_files as $f){
 }
 
 $version = trim((string)@file_get_contents(__DIR__.'/version'));
+
+if(\testman\Args::opt('version')){
+	echo 'testman '.($version ?: 'unknown').PHP_EOL;
+	exit(0);
+}
+
 testman\Std::println('testman '.($version ? $version.' ' : '').'(PHP '.phpversion().')');
 testman\Std::println();
 
@@ -208,6 +226,7 @@ if(\testman\Args::opt('help')){
 	\testman\Std::println('  -p, --parallel N  Run tests in parallel (N workers, default: CPU cores)');
 	\testman\Std::println('  --stub      Dump IDE stubs to stdout');
 	\testman\Std::println('  --install [path]  Install to /usr/local/bin/testman (or specified path)');
+	\testman\Std::println('  --version         Show version');
 	\testman\Std::println();
 }else if(($keyword = \testman\Args::opt('list', false)) !== false || ($keyword = \testman\Args::opt('l', false)) !== false){
 	\testman\Finder::summary_list($testdir, $keyword);
@@ -236,7 +255,7 @@ if(\testman\Args::opt('help')){
 				exit(1);
 			}
 		}
-	}catch(\Exception $e){
+	}catch(\Throwable $e){
 		\testman\Std::println_danger(PHP_EOL.get_class($e).': '.$e->getMessage().PHP_EOL.PHP_EOL.$e->getTraceAsString());
 		exit(1);
 	}

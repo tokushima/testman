@@ -205,7 +205,7 @@ class Runner{
 
 			// ターミナルのエコーを復元
 			self::restore_terminal_echo();
-		}catch(\Exception $e){
+		}catch(\Throwable $e){
 			self::restore_terminal_echo();
 			\testman\Std::println_danger(PHP_EOL.PHP_EOL.'Failure:'.PHP_EOL.PHP_EOL.$e->getMessage().PHP_EOL.$e->getTraceAsString());
 		}
@@ -523,7 +523,7 @@ class Runner{
 			[$debug] = $e->getTrace();
 			$res = [-1, 0, $debug['file'], $debug['line'], $e->getMessage(), $e->expectation(), $e->result(), $e->has()];
 			ob_end_clean();
-		}catch(\Exception $e){
+		}catch(\Throwable $e){
 			$res = [-2, 0, $e->getFile(), $e->getLine(), (string)$e];
 			ob_end_clean();
 		}
@@ -647,10 +647,10 @@ class Runner{
 			if(!isset($res) && $debug['file'] === __FILE__ && isset($debug['args'][1]['path'])){
 				$res = [-2, 0, $debug['args'][1]['path'], 0, ((string)$e)];				
 			}
-		}catch(\Exception $e){
+		}catch(\Throwable $e){
 			$trace = $e->getTrace();
-			$root = preg_replace('/^phar:\/\/(.+\.phar)\/src\/testman\/.+$/','\\1',__FILE__);
-			
+			$root = preg_replace('/^phar:\/\/(.+?)\/src\/testman\/.+$/','\\1',__FILE__);
+
 			for($i=sizeof($trace);$i>=0;$i--){
 				if(isset($trace[$i]['file']) && strpos($trace[$i]['file'],$root) === false){
 					$res = [-2,0,$trace[$i]['file'],$trace[$i]['line'],((string)$e).PHP_EOL.$trace[$i]['file'].PHP_EOL.$root];

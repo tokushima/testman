@@ -23,11 +23,25 @@ class Conf{
 		}
 		return null;
 	}
+	private static ?string $base_dir = null;
+
+	/**
+	 * settings探索の基準ディレクトリを設定する
+	 */
+	public static function set_base_dir(string $dir): void{
+		self::$base_dir = $dir;
+	}
+
 	public static function settings_path(string $name): string{
+		// 明示的に設定された基準ディレクトリを優先
+		if(self::$base_dir !== null && is_dir(self::$base_dir)){
+			return self::$base_dir.'/'.$name;
+		}
+
 		$d = debug_backtrace(false);
 		$d = array_pop($d);
 		$dir = str_replace('phar://','',dirname($d['file']));
-		
+
 		if(!is_dir($dir)){
 			throw new \InvalidArgumentException('not found '.$dir);
 		}
