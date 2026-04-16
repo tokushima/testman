@@ -163,12 +163,14 @@ class ImageComparator{
 		//   1. エッジピクセルが全差異の70%超
 		//   2. maxChannelDiff <= 128 かつ diffRatio < 2%
 		//   3. diffRatio < 0.5% かつ エッジが過半数（GS/CoreGraphicsのレンダリング差吸収）
+		//   4. 差異ピクセルが極少数(<=10)かつ diffRatio < 0.01%（レンダリングエンジン間の孤立ピクセル差吸収）
 		$is_antialiasing = false;
 		if($total_diff_pixels > 0){
 			$edge_ratio = $edge_pixels / $total_diff_pixels;
 			$is_antialiasing = $edge_ratio > 0.7
 				|| ($max_channel_diff <= 128 && $diff_ratio < 0.02)
-				|| ($diff_ratio < 0.005 && $edge_pixels > $solid_pixels);
+				|| ($diff_ratio < 0.005 && $edge_pixels > $solid_pixels)
+				|| ($total_diff_pixels <= 10 && $diff_ratio < 0.0001);
 		}
 
 		$effective_diff_ratio = $diff_ratio;
