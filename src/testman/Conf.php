@@ -33,19 +33,11 @@ class Conf{
 	}
 
 	public static function settings_path(string $name): string{
-		// 明示的に設定された基準ディレクトリを優先
+		// テストディレクトリ（testmanを実行したディレクトリ）を基準にする
 		if(self::$base_dir !== null && is_dir(self::$base_dir)){
 			return self::$base_dir.'/'.$name;
 		}
-
-		$d = debug_backtrace(false);
-		$d = array_pop($d);
-		$dir = str_replace('phar://','',dirname($d['file']));
-
-		if(!is_dir($dir)){
-			throw new \InvalidArgumentException('not found '.$dir);
-		}
-		return $dir.'/'.$name;
+		return getcwd().'/'.$name;
 	}
 
 	public static function log_debug_callback(string $message): void{

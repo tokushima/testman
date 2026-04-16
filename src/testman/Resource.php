@@ -12,7 +12,7 @@ class Resource{
 		if($dir !== null && (is_file($f=$dir.'/'.$file) || is_dir($f=$dir.'/'.$file))){
 			return realpath($f);
 		}
-		throw new \testman\NotFoundException($file.' not found');
+		throw new \testman\NotFoundException(($dir !== null ? $dir.'/' : '').$file.' not found');
 	}
 }
 
