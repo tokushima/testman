@@ -154,6 +154,27 @@ if(\testman\Args::opt('stub')){
 	exit(0);
 }
 
+// --install: /usr/local/bin/testman にインストール
+if(\testman\Args::opt('install')){
+	$phar_path = \Phar::running(false);
+	if(empty($phar_path)){
+		fwrite(STDERR, 'Error: --install can only be used from testman.phar'.PHP_EOL);
+		exit(1);
+	}
+	$install_path = \testman\Args::opt('install');
+	if(!is_string($install_path)){
+		$install_path = '/usr/local/bin/testman';
+	}
+	$content = '#!/usr/bin/env php'.PHP_EOL.file_get_contents($phar_path);
+	if(@file_put_contents($install_path, $content) === false){
+		fwrite(STDERR, 'Error: Permission denied. Try: sudo php '.$phar_path.' --install'.PHP_EOL);
+		exit(1);
+	}
+	chmod($install_path, 0755);
+	echo 'Installed to '.$install_path.PHP_EOL;
+	exit(0);
+}
+
 $testdir = realpath(\testman\Args::value(getcwd().'/test'));
 
 if($testdir === false){
@@ -186,6 +207,7 @@ if(\testman\Args::opt('help')){
 	\testman\Std::println('  --info            Info setup[s]');
 	\testman\Std::println('  -p, --parallel N  Run tests in parallel (N workers, default: CPU cores)');
 	\testman\Std::println('  --stub      Dump IDE stubs to stdout');
+	\testman\Std::println('  --install [path]  Install to /usr/local/bin/testman (or specified path)');
 	\testman\Std::println();
 }else if(($keyword = \testman\Args::opt('list', false)) !== false || ($keyword = \testman\Args::opt('l', false)) !== false){
 	\testman\Finder::summary_list($testdir, $keyword);
