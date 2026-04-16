@@ -96,6 +96,34 @@ if(!function_exists('mneq')){
 		}
 	}
 }
+if(!function_exists('img_eq')){
+	/**
+	 * 画像ファイルが等しいことを検証する（PNG, JPG, PDF対応）
+	 *
+	 * アンチエイリアス差はエッジ検出で自動判定し無視する
+	 *
+	 * @param string $expected_file 期待画像のパス
+	 * @param string $actual_file 実際の画像のパス
+	 * @param bool $ignore_antialiasing アンチエイリアス差を無視するか
+	 * @param int $page PDFの場合のページ番号（0始まり）
+	 * @param string $msg 失敗時のメッセージ
+	 * @throws \testman\AssertFailure
+	 */
+	function img_eq(string $expected_file, string $actual_file, bool $ignore_antialiasing = true, int $page = 0, string $msg = 'failure image equals'): void{
+		$result = \testman\ImageComparator::compare($expected_file, $actual_file, $ignore_antialiasing, $page);
+		if($result['diff_ratio'] > 0.0){
+			$a = $result['analysis'];
+			$detail = sprintf(
+				'diff=%.2f%% (edge:%d solid:%d maxChDiff:%d)',
+				($a['total_diff_pixels'] / max($a['total_pixels'], 1)) * 100,
+				$a['edge_pixels'],
+				$a['solid_pixels'],
+				$a['max_channel_diff']
+			);
+			throw (new \testman\AssertFailure($msg))->ab('images match', $detail);
+		}
+	}
+}
 if(!function_exists('b')){
 	/**
 	 * Browserインスタンスを生成
