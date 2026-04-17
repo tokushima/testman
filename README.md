@@ -131,6 +131,35 @@ meq('<title>', $html_string);      // HTML に <title> タグが含まれる
 mneq('error', $response_body);     // レスポンスに 'error' が含まれない
 ```
 
+#### `img_eq($expected_file, $actual_file, $ignore_antialiasing, $page, $msg)` - 画像が等しいことを検証
+
+PNG, JPG, PDF に対応しています。アンチエイリアスやレンダリングエンジン間の微小な差異は自動的に無視されます。
+
+```php
+<?php
+// 画像の比較
+img_eq('/path/to/expected.png', '/path/to/actual.png');
+
+// リソースファイルとの比較
+img_eq(\testman\Resource::path('expected.png'), $output_file);
+
+// アンチエイリアス無視を無効化（厳密比較）
+img_eq($expected, $actual, false);
+
+// PDFのページ指定（0始まり）
+img_eq($expected_pdf, $actual_pdf, true, 2);  // 3ページ目を比較
+```
+
+PDF の比較には Ghostscript (`gs`) が必要です。
+
+```bash
+# macOS
+brew install ghostscript
+
+# Linux
+apt install ghostscript
+```
+
 #### `fail($msg)` - テストを明示的に失敗させる
 
 ```php
@@ -278,6 +307,19 @@ eq('test', $user['name']);
 $path = \testman\Resource::path('sample.json');
 $data = json_decode(file_get_contents($path), true);
 ```
+
+`testman.resources/` はテストファイルのディレクトリから実行ディレクトリまで遡って探索されます。
+
+```
+tests/                          # 実行ディレクトリ (cwd)
+├── test/
+│   ├── testman.resources/      # ← ここが見つかる
+│   └── case/
+│       └── sub/
+│           └── my_test.php     # ← このテストから探索開始
+```
+
+探索順: `test/case/sub/` → `test/case/` → `test/` → `tests/`
 
 ## HTTP テスト（Browser）
 
@@ -563,6 +605,9 @@ Results:
 | `browser_has_error_func` | `callable` | Browser のエラー判定カスタム関数 |
 | `browser_find_func` | `callable` | Browser の要素検索カスタム関数 |
 | `log_debug_callback` | `callable` | デバッグログのコールバック関数 |
+| `image_pdf_converter` | `callable` | カスタムPDF→画像変換関数 `function($file, $page): string` |
+| `image_pdf_dpi` | `int` | PDF変換時のDPI（デフォルト: `72`） |
+| `resources_dir` | `string` | リソースディレクトリの明示指定（並列実行用） |
 
 ## 動作要件
 
@@ -570,3 +615,5 @@ Results:
 - cURL 拡張（HTTP テスト利用時）
 - pcntl 拡張（並列実行利用時、任意）
 - mbstring 拡張（推奨）
+- GD 拡張（画像比較利用時）
+- Ghostscript（PDF 比較利用時）

@@ -129,14 +129,14 @@ class Runner{
 			});
 
 			$is_head_print = false;
-			if(null !== ($f = \testman\Conf::has_settings('settings.php'))){
+			if(null !== ($f = \testman\Conf::find_settings_path('settings.php'))){
 				$msg = 'Settings: '.$f;
 				\testman\Std::println($msg,'36');
 					include_once($f);
 				$is_head_print = true;
 			}
 			
-			if(null !== ($dir = \testman\Conf::has_settings('lib'))){
+			if(null !== ($dir = \testman\Conf::find_settings_path('lib'))){
 				$dir = realpath($dir);
 			
 				spl_autoload_register(function($class) use ($dir){
@@ -161,7 +161,7 @@ class Runner{
 			$test_list = \testman\Finder::get_list($testdir);
 			\testman\Std::bs(strlen($msg));
 
-			if(null !== ($f = \testman\Conf::has_settings('fixture.php'))){
+			if(null !== ($f = \testman\Conf::find_settings_path('fixture.php'))){
 				$msg = 'Fixture: '.$f;
 				\testman\Std::println($msg,'36');
 					include_once($f);
@@ -420,12 +420,12 @@ class Runner{
 		$cwd = \testman\Finder::cwd();
 
 		// 親プロセスでパスを解決しておく
-		$settings_path = \testman\Conf::has_settings('settings.php');
-		$lib_dir = \testman\Conf::has_settings('lib');
+		$settings_path = \testman\Conf::find_settings_path('settings.php');
+		$lib_dir = \testman\Conf::find_settings_path('lib');
 		if($lib_dir !== null){
 			$lib_dir = realpath($lib_dir);
 		}
-		$resources_dir = \testman\Conf::has_settings('resources');
+		$resources_dir = \testman\Conf::find_settings_path('resources');
 		if($resources_dir !== null){
 			$resources_dir = realpath($resources_dir);
 		}

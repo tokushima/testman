@@ -719,12 +719,12 @@ class Conf
     public static function get(string $name, $default = null) {}
 
     /**
-     * 設定ファイル（testman.{name}）が存在するか確認する
+     * 設定ファイル（testman.{name}）のパスを探索して返す
      *
      * @param string $name ファイル名（拡張子含む）
      * @return string|null パス（存在しない場合は null）
      */
-    public static function has_settings(string $name): ?string {}
+    public static function find_settings_path(string $name): ?string {}
 
     /**
      * 設定ファイルのパスを返す
