@@ -588,53 +588,58 @@ class Runner{
 		self::$current_test = $test_file;
 		$res = null;
 
+		\testman\Conf::push();
 		try{
-			ob_start();
-			self::exec_setup_teardown($test_file,true);
-			$test_exec_start_time = microtime(true);
+			try{
+				ob_start();
+				self::exec_setup_teardown($test_file,true);
+				$test_exec_start_time = microtime(true);
 
-			foreach(self::$vars as $k => $v){
-				$$k = $v;
-			}
-			include($test_file);
-			$rtn = ob_get_clean();
-
-			if(preg_match('/(Parse|Fatal) error:.+/',$rtn,$m)){
-				$err = (preg_match('/syntax error.+code on line\s*(\d+)/',$rtn,$line) ?
-						'Parse error: syntax error '.$test_file.' code on line '.$line[1]
-						: $m[0]);
-				throw new \RuntimeException($err);
-			}
-			$res = [1,(round(microtime(true) - $test_exec_start_time,3))];
-		}catch(\testman\AssertFailure $e){
-			list($debug) = $e->getTrace();
-			$res = [-1,0,$debug['file'],$debug['line'],$e->getMessage(),$e->expectation(),$e->result(),$e->has()];
-			ob_end_clean();
-		}catch(\testman\DefinedVarsRequireException $e){
-			list($debug) = $e->getTrace();
-			if(!isset($res) && $debug['file'] === __FILE__ && isset($debug['args'][1]['path'])){
-				$res = [-2, 0, $debug['args'][1]['path'], 0, ((string)$e)];				
-			}
-		}catch(\Throwable $e){
-			$trace = $e->getTrace();
-			$root = preg_replace('/^phar:\/\/(.+?)\/src\/testman\/.+$/','\\1',__FILE__);
-
-			for($i=sizeof($trace);$i>=0;$i--){
-				if(isset($trace[$i]['file']) && strpos($trace[$i]['file'],$root) === false){
-					$res = [-2,0,$trace[$i]['file'],$trace[$i]['line'],((string)$e).PHP_EOL.$trace[$i]['file'].PHP_EOL.$root];
-					break;
+				foreach(self::$vars as $k => $v){
+					$$k = $v;
 				}
+				include($test_file);
+				$rtn = ob_get_clean();
+
+				if(preg_match('/(Parse|Fatal) error:.+/',$rtn,$m)){
+					$err = (preg_match('/syntax error.+code on line\s*(\d+)/',$rtn,$line) ?
+							'Parse error: syntax error '.$test_file.' code on line '.$line[1]
+							: $m[0]);
+					throw new \RuntimeException($err);
+				}
+				$res = [1,(round(microtime(true) - $test_exec_start_time,3))];
+			}catch(\testman\AssertFailure $e){
+				list($debug) = $e->getTrace();
+				$res = [-1,0,$debug['file'],$debug['line'],$e->getMessage(),$e->expectation(),$e->result(),$e->has()];
+				ob_end_clean();
+			}catch(\testman\DefinedVarsRequireException $e){
+				list($debug) = $e->getTrace();
+				if(!isset($res) && $debug['file'] === __FILE__ && isset($debug['args'][1]['path'])){
+					$res = [-2, 0, $debug['args'][1]['path'], 0, ((string)$e)];
+				}
+			}catch(\Throwable $e){
+				$trace = $e->getTrace();
+				$root = preg_replace('/^phar:\/\/(.+?)\/src\/testman\/.+$/','\\1',__FILE__);
+
+				for($i=sizeof($trace);$i>=0;$i--){
+					if(isset($trace[$i]['file']) && strpos($trace[$i]['file'],$root) === false){
+						$res = [-2,0,$trace[$i]['file'],$trace[$i]['line'],((string)$e).PHP_EOL.$trace[$i]['file'].PHP_EOL.$root];
+						break;
+					}
+				}
+				if(!isset($res)){
+					$res = [-2,0,$e->getFile(),$e->getLine(),((string)$e)];
+				}
+				ob_end_clean();
 			}
-			if(!isset($res)){
-				$res = [-2,0,$e->getFile(),$e->getLine(),((string)$e)];
-			}
-			ob_end_clean();
+			$test_name = self::short_name($test_file);
+			self::exec_setup_teardown($test_file,false);
+
+			self::$resultset[$test_name] = $res;
+			return [$test_name, $res];
+		}finally{
+			\testman\Conf::pop();
 		}
-		$test_name = self::short_name($test_file);
-		self::exec_setup_teardown($test_file,false);
-				
-		self::$resultset[$test_name] = $res;
-		return [$test_name, $res];
 	}
 
 	/**
