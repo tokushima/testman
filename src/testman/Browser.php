@@ -101,7 +101,7 @@ class Browser{
 	 * ACCEPT=application/jsonを設定する
 	 */
 	public function set_header_accept_json(): self{
-		return $this->header('Accept','application/json');
+		return $this->header('Accept', \testman\Conf::get('accept_json', 'application/json'));
 	}
 	/**
 	 * ACCEPTを指定しない

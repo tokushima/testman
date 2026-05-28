@@ -8,7 +8,7 @@ INSTALL_PATH="/usr/local/bin/testman"
 cd "$SCRIPT_DIR"
 
 echo "Building ${PHAR_NAME}..."
-php -d phar.readonly=0 cmdman.phar cmdman.Util::archive --dir src/
+php -d phar.readonly=0 "$(command -v cmdman)" cmdman.Util::archive --dir src/
 
 echo "Adding shebang to phar stub..."
 php -d phar.readonly=0 -r "

@@ -3,6 +3,7 @@ namespace testman;
 
 class Conf{
 	static private array $conf = [];
+	static private array $conf_stack = [];
 
 	public static function set(array $conf): void{
 		foreach($conf as $k => $v){
@@ -14,6 +15,14 @@ class Conf{
 			return self::$conf[$name];
 		}
 		return $default;
+	}
+	public static function push(): void{
+		self::$conf_stack[] = self::$conf;
+	}
+	public static function pop(): void{
+		if(!empty(self::$conf_stack)){
+			self::$conf = array_pop(self::$conf_stack);
+		}
 	}
 	private static array $found_settings_cache = [];
 

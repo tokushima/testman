@@ -27,13 +27,6 @@ class Runner{
 		return self::$current_test;
 	}
 
-	private static function trim_msg(string $msg, int $len = self::LINE_WIDTH): string{
-		if(strlen($msg) > $len){
-			$half = (int)ceil($len / 2);
-			return mb_substr($msg, 0, $half).' .. '.mb_substr($msg, $half * -1);
-		}
-		return $msg;
-	}
 	private static bool $echo_disabled = false;
 
 	/**
@@ -231,16 +224,10 @@ class Runner{
 	 */
 	private static function run_sequential(array $test_list): void{
 		$testcnt = sizeof($test_list);
-		$ey = $cnt = 0;
+		$cnt = 0;
 		$pass_cnt = $fail_cnt = 0;
 
-		for($i = 0; $i < 5; $i++){
-			\testman\Std::println();
-		}
-		\testman\Std::cur(-5, 0);
-
 		foreach($test_list as $test_path){
-			// 中断チェック
 			if(self::$interrupted){
 				break;
 			}
@@ -248,42 +235,23 @@ class Runner{
 			$cnt++;
 			$test_short = self::short_name($test_path);
 
-			// プログレス表示
 			$progress_line = self::render_progress($cnt, $testcnt, $pass_cnt, $fail_cnt, $test_short);
-			\testman\Std::p($progress_line);
+			\testman\Std::p("\r\033[2K".$progress_line);
 
 			[$test_name, $res] = self::exec($test_path);
-			\testman\Std::bs(mb_strlen(preg_replace('/\033\[[0-9;]*m/', '', $progress_line)));
 
 			if($res[0] == 1){
 				$pass_cnt++;
 			}else{
 				$fail_cnt++;
-				if($ey == 0){
-					$ey = 2;
-					\testman\Std::cur($ey, 0);
-					\testman\Std::p('Failures:', self::ANSI_RED);
-					\testman\Std::cur($ey * -1, -9);
-				}
-				$ey++;
-
-				$fail_msg = '  '.self::trim_msg($test_name, 70).':'.$res[3];
-				\testman\Std::cur($ey, 0);
-				\testman\Std::p($fail_msg.PHP_EOL.PHP_EOL.PHP_EOL, self::ANSI_RED);
-				\testman\Std::cur(($ey + 3) * -1, strlen($fail_msg) * -1);
+				$fail_msg = '  '.$test_name.':'.$res[3];
+				\testman\Std::p("\r\033[2K");
+				\testman\Std::println($fail_msg, self::ANSI_RED);
 			}
 			self::$resultset[$test_name] = $res;
 		}
 
-		// 実行中の表示をクリア
-		\testman\Std::line_clear();
-		if($ey > 0){
-			for($a = 0; $a <= $ey; $a++){
-				\testman\Std::cur(1, 0);
-				\testman\Std::line_clear();
-			}
-			\testman\Std::cur($ey * -1, 0);
-		}
+		\testman\Std::p("\r\033[2K");
 	}
 
 	/**
