@@ -267,6 +267,11 @@ class Runner{
 		// テストをキューに入れる
 		$queue = $test_list;
 
+		// worker slot プール: 並列度 N に対して 1..N の slot ID を発行・回収する。
+		// 同じ slot ID を持つプロセスは同時に走らないため、worker が SQLite ファイル等を
+		// slot ID で名前分けすれば書き込み競合を避けられる。
+		$available_slots = range(1, $workers);
+
 		while(!empty($queue) || !empty($running)){
 			// 中断チェック - 新規ワーカーは起動しない
 			if(self::$interrupted){
@@ -277,13 +282,15 @@ class Runner{
 			while(count($running) < $workers && !empty($queue) && !self::$interrupted){
 				$test_path = array_shift($queue);
 				$test_name = self::short_name($test_path);
+				$slot_id = array_shift($available_slots);
 
 				// 一時ファイルで結果を受け取る
 				$tmp_file = sys_get_temp_dir().'/testman_'.md5($test_path).'.json';
 
-				// サブプロセスでテストを実行
+				// サブプロセスでテストを実行 (TESTMAN_WORKER_ID で slot ID を渡す)
 				$cmd = sprintf(
-					'php -r %s %s %s 2>&1',
+					'TESTMAN_WORKER_ID=%d php -r %s %s %s 2>&1',
+					$slot_id,
 					escapeshellarg(self::get_worker_code()),
 					escapeshellarg($test_path),
 					escapeshellarg($tmp_file)
@@ -304,8 +311,12 @@ class Runner{
 						'test_path' => $test_path,
 						'test_name' => $test_name,
 						'tmp_file' => $tmp_file,
+						'slot_id' => $slot_id,
 						'start' => microtime(true)
 					];
+				}else{
+					// 起動失敗時は slot を戻す
+					$available_slots[] = $slot_id;
 				}
 			}
 
@@ -363,6 +374,8 @@ class Runner{
 					);
 					\testman\Std::p($progress);
 
+					// slot を pool に返却して再利用可能にする
+					$available_slots[] = $job['slot_id'];
 					unset($running[$key]);
 				}
 			}
