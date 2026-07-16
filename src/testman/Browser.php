@@ -104,6 +104,13 @@ class Browser{
 		return $this->header('Accept', \testman\Conf::get('accept_json', 'application/json'));
 	}
 	/**
+	 * ACCEPT=application/json (envelope=false) を設定する。
+	 * result で包まない生JSON（本番クライアントと同じ形）でレスポンスを受け取る。
+	 */
+	public function set_header_accept_json_no_envelope(): self{
+		return $this->header('Accept', 'application/json; envelope=false');
+	}
+	/**
 	 * ACCEPTを指定しない
 	 */
 	public function set_header_accept_none(): self{

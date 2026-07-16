@@ -179,6 +179,15 @@ class Browser
     public function set_header_accept_json(): self {}
 
     /**
+     * Accept: application/json (envelope=false) ヘッダを設定する
+     *
+     * result で包まない生JSON（本番クライアントと同じ形）でレスポンスを受け取る。
+     *
+     * @return static
+     */
+    public function set_header_accept_json_no_envelope(): self {}
+
+    /**
      * Accept を指定しない（Accept: star/star）
      *
      * @return static
