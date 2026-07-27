@@ -214,6 +214,13 @@ class Browser{
 		return $this->request('DELETE',$url);
 	}
 	/**
+	 * OPTIONSリクエスト（CORSプリフライト等）
+	 * @param string|array $url
+	 */
+	public function do_options($url): self{
+		return $this->request('OPTIONS',$url);
+	}
+	/**
 	 * GETリクエスト
 	 * @param string|array $url
 	 */
@@ -378,6 +385,7 @@ class Browser{
 			case 'HEAD': curl_setopt($this->resource,CURLOPT_NOBODY,true); break;
 			case 'PUT': curl_setopt($this->resource,CURLOPT_PUT,true); break;
 			case 'DELETE': curl_setopt($this->resource,CURLOPT_CUSTOMREQUEST,'DELETE'); break;
+			case 'OPTIONS': curl_setopt($this->resource,CURLOPT_CUSTOMREQUEST,'OPTIONS'); break;
 		}
 		switch($method){
 			case 'POST':
