@@ -236,6 +236,10 @@ class Runner{
 			$test_short = self::short_name($test_path);
 
 			$progress_line = self::render_progress($cnt, $testcnt, $pass_cnt, $fail_cnt, $test_short);
+			$cols = \testman\Std::cols();
+			if($cols > 0){
+				$progress_line = \testman\Std::truncate_visible($progress_line, $cols - 1);
+			}
 			\testman\Std::p("\r\033[2K".$progress_line);
 
 			[$test_name, $res] = self::exec($test_path);
@@ -364,7 +368,7 @@ class Runner{
 
 					// プログレス表示
 					$progress = sprintf(
-						"\r[%d/%d] %s %d%% \033[%sm%d ✓\033[0m \033[%sm%d ✗\033[0m",
+						"[%d/%d] %s %d%% \033[%sm%d ✓\033[0m \033[%sm%d ✗\033[0m",
 						$completed, $testcnt,
 						str_repeat('█', (int)(($completed / $testcnt) * self::PROGRESS_WIDTH)).
 						str_repeat('░', self::PROGRESS_WIDTH - (int)(($completed / $testcnt) * self::PROGRESS_WIDTH)),
@@ -372,7 +376,11 @@ class Runner{
 						self::ANSI_GREEN, $pass_cnt,
 						self::ANSI_RED, $fail_cnt
 					);
-					\testman\Std::p($progress);
+					$cols = \testman\Std::cols();
+					if($cols > 0){
+						$progress = \testman\Std::truncate_visible($progress, $cols - 1);
+					}
+					\testman\Std::p("\r\033[2K".$progress);
 
 					// slot を pool に返却して再利用可能にする
 					$available_slots[] = $job['slot_id'];
@@ -798,6 +806,27 @@ class Runner{
 		// ファイル名（最後のディレクトリ/ファイル名のみ）
 		$short_filename = self::last_dir_filename($filename);
 
-		return sprintf('%s %s %3d%% %s %s', $counter, $bar, $percent, $status, $short_filename);
+		$prefix = sprintf('%s %s %3d%% %s ', $counter, $bar, $percent, $status);
+
+		// ターミナル幅に収めてファイル名を切り詰める（折り返しによる表示崩れ対策）
+		$cols = \testman\Std::cols();
+		if($cols > 0){
+			$budget = $cols - self::visible_width($prefix) - 1; // 端での折り返しを避けて1桁マージン
+			if($budget > 0 && function_exists('mb_strwidth') && mb_strwidth($short_filename, 'UTF-8') > $budget){
+				$short_filename = mb_strimwidth($short_filename, 0, $budget, '…', 'UTF-8');
+			}elseif($budget <= 0){
+				$short_filename = '';
+			}
+		}
+
+		return $prefix.$short_filename;
+	}
+
+	/**
+	 * ANSIエスケープを除いた表示幅を返す
+	 */
+	private static function visible_width(string $str): int{
+		$str = preg_replace('/\033\[[0-9;]*m/', '', $str);
+		return function_exists('mb_strwidth') ? mb_strwidth($str, 'UTF-8') : strlen($str);
 	}
 }
