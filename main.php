@@ -144,7 +144,7 @@ if(sizeof($debug) > 1 || (isset($debug[0]['file']) && substr($debug[0]['file'], 
 \testman\Args::init();
 
 // 未知のオプションチェック
-$unknown = \testman\Args::unknown_opts(['stub', 'install', 'help', 'list', 'l', 'info', 'i', 'I', 'parallel', 'p', 'version']);
+$unknown = \testman\Args::unknown_opts(['stub', 'install', 'help', 'list', 'l', 'info', 'i', 'I', 'parallel', 'p', 'retry', 'r', 'seed-workers', 'version']);
 if(!empty($unknown)){
 	fwrite(STDERR, 'Unknown option: --'.implode(', --', $unknown).PHP_EOL);
 	fwrite(STDERR, 'Run with --help for usage information'.PHP_EOL);
@@ -224,6 +224,8 @@ if(\testman\Args::opt('help')){
 	\testman\Std::println('  --list [keyword]  List test files');
 	\testman\Std::println('  --info            Info setup[s]');
 	\testman\Std::println('  -p, --parallel N  Run tests in parallel (N workers, default: CPU cores)');
+	\testman\Std::println('  -r, --retry N     Re-run failed tests up to N times (serial, fixture re-applied)');
+	\testman\Std::println('  --seed-workers    Before a parallel run, seed each worker env by running the fixture per slot');
 	\testman\Std::println('  --stub      Dump IDE stubs to stdout');
 	\testman\Std::println('  --install [path]  Install to /usr/local/bin/testman (or specified path)');
 	\testman\Std::println('  --version         Show version');
@@ -242,7 +244,17 @@ if(\testman\Args::opt('help')){
 		if($parallel === false){
 			$parallel = \testman\Args::opt('p', false);
 		}
-		$results = \testman\Runner::start($testdir, $parallel);
+		// リトライ回数オプション（失敗テストの再実行）
+		$retry = \testman\Args::opt('retry', false);
+		if($retry === false){
+			$retry = \testman\Args::opt('r', false);
+		}
+		$retry = ($retry === false || $retry === true) ? ($retry === true ? 1 : 0) : max(0, (int)$retry);
+
+		// 並列前の worker 環境 seed オプション
+		$seed_workers = \testman\Args::has_opt('seed-workers');
+
+		$results = \testman\Runner::start($testdir, $parallel, $retry, $seed_workers);
 
 		// 中断された場合は終了コード130（SIGINT）
 		if(\testman\Runner::is_interrupted()){

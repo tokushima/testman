@@ -15,6 +15,8 @@ class Runner{
 	private const ANSI_BOLD = '1';
 
 	private static array $resultset = [];
+	private static array $test_paths = []; // test_name => 実行したテストの絶対パス（--retry の再実行に使う）
+	private static bool $retry_enabled = false; // --retry 指定時。失敗を「確定」でなく「後でリトライ」として表示する
 	private static string $current_test;
 	private static bool $start = false;
 	private static array $vars = [];
@@ -82,7 +84,7 @@ class Runner{
 	 * @param string $testdir テストディレクトリ
 	 * @param int|bool $parallel 並列数（false=逐次, true=自動, int=指定数）
 	 */
-	public static function start(string $testdir, $parallel = false): array{
+	public static function start(string $testdir, $parallel = false, int $retry = 0, bool $seed_workers = false): array{
 		if(self::$start){
 			return self::$resultset;
 		}
@@ -91,6 +93,7 @@ class Runner{
 		}
 		self::$start = true;
 		self::$interrupted = false;
+		self::$retry_enabled = ($retry > 0);
 
 		// シグナルハンドラを登録
 		self::register_signal_handlers();
@@ -177,6 +180,11 @@ class Runner{
 				$workers = ($parallel === true) ? self::get_cpu_cores() : max(1, (int)$parallel);
 				$workers = min($workers, $testcnt);
 
+				// --seed-workers: 並列実行の前に worker スロット毎の環境を fixture で用意する
+				if($seed_workers){
+					self::seed_workers($workers);
+				}
+
 				\testman\Std::println_info(sprintf('Running %d tests with %d workers...', $testcnt, $workers));
 				\testman\Std::println();
 
@@ -184,6 +192,13 @@ class Runner{
 			}else{
 				// 逐次実行
 				self::run_sequential($test_list);
+			}
+
+			// --retry: 失敗/例外になったテストを親プロセスで再実行する。
+			// 並列実行では CPU 競合等で重いテストが稀に落ちる（負荷 flaky）。それを直列(=低競合)で
+			// 再実行して救済する。fixture を都度再適用し、__setup__ 連鎖込みでクリーンに走らせる。
+			if($retry > 0 && !self::$interrupted){
+				self::retry_failed($retry);
 			}
 
 			$exe_time = round((microtime(true) - (float)$start_time), 4);
@@ -248,14 +263,56 @@ class Runner{
 				$pass_cnt++;
 			}else{
 				$fail_cnt++;
-				$fail_msg = '  '.$test_name.':'.$res[3];
-				\testman\Std::p("\r\033[2K");
-				\testman\Std::println($fail_msg, self::ANSI_RED);
+				// --retry 時は「後でリトライ」なので実行中の確定失敗表示は出さない（最終結果に委ねる）。
+				if(!self::$retry_enabled){
+					$fail_msg = '  '.$test_name.':'.$res[3];
+					\testman\Std::p("\r\033[2K");
+					\testman\Std::println($fail_msg, self::ANSI_RED);
+				}
 			}
 			self::$resultset[$test_name] = $res;
 		}
 
 		\testman\Std::p("\r\033[2K");
+	}
+
+	/**
+	 * 失敗/例外になったテストを再実行して救済する（--retry N）。
+	 *
+	 * 並列実行では CPU 競合等で重いテストが稀に落ちる（負荷 flaky）。これを親プロセスで
+	 * 直列（＝低競合）に再実行して回復させる。各再実行の前に fixture を再適用し、exec() が
+	 * __setup__ 連鎖込みでクリーンに走らせるため、蓄積状態に依存しない。
+	 * exec() は resultset[test_name] を上書きするので、回復したものは pass に変わる。
+	 */
+	private static function retry_failed(int $retry): void{
+		$fixture = \testman\Conf::find_settings_path('fixture.php');
+
+		for($round = 1; $round <= $retry; $round++){
+			$targets = [];
+			foreach(self::$resultset as $name => $info){
+				if(($info[0] ?? 1) !== 1 && isset(self::$test_paths[$name]) && is_file(self::$test_paths[$name])){
+					$targets[$name] = self::$test_paths[$name];
+				}
+			}
+			if(empty($targets)){
+				break;
+			}
+
+			\testman\Std::println();
+			\testman\Std::println_info(sprintf('Retry %d/%d: re-running %d failed test(s)...', $round, $retry, count($targets)));
+
+			foreach($targets as $path){
+				if(self::$interrupted){
+					break;
+				}
+				if($fixture !== null){
+					ob_start();
+					include($fixture); // fixture 再適用でクリーンにする
+					ob_end_clean();
+				}
+				self::exec($path); // resultset[short_name] を上書き更新
+			}
+		}
 	}
 
 	/**
@@ -339,6 +396,7 @@ class Runner{
 					$exit_code = proc_close($job['proc']);
 
 					$completed++;
+					self::$test_paths[$job['test_name']] = $job['test_path'];
 
 					// 結果を読み取る
 					if(is_file($job['tmp_file'])){
@@ -367,14 +425,17 @@ class Runner{
 					}
 
 					// プログレス表示
+					// --retry 時は失敗を「確定 ✗」ではなく「後でリトライ ⟳」（黄）として見せる。
+					$fail_color = self::$retry_enabled ? self::ANSI_YELLOW : self::ANSI_RED;
+					$fail_mark  = self::$retry_enabled ? '⟳' : '✗';
 					$progress = sprintf(
-						"[%d/%d] %s %d%% \033[%sm%d ✓\033[0m \033[%sm%d ✗\033[0m",
+						"[%d/%d] %s %d%% \033[%sm%d ✓\033[0m \033[%sm%d %s\033[0m",
 						$completed, $testcnt,
 						str_repeat('█', (int)(($completed / $testcnt) * self::PROGRESS_WIDTH)).
 						str_repeat('░', self::PROGRESS_WIDTH - (int)(($completed / $testcnt) * self::PROGRESS_WIDTH)),
 						(int)(($completed / $testcnt) * 100),
 						self::ANSI_GREEN, $pass_cnt,
-						self::ANSI_RED, $fail_cnt
+						$fail_color, $fail_cnt, $fail_mark
 					);
 					$cols = \testman\Std::cols();
 					if($cols > 0){
@@ -485,6 +546,142 @@ class Runner{
 				exit(1);
 			}
 		';
+	}
+
+	/**
+	 * worker 毎の環境を seed するサブプロセス用の PHP コード。
+	 * fixture.php を新しいプロセスで実行するだけ（DB接続はプロセス毎に張り直されるため、
+	 * TESTMAN_WORKER_ID を見てフレームワークが worker 毎の DB を掴む）。テスト実行はしない。
+	 */
+	private static function get_seed_code(): string{
+		$phar = \Phar::running(false);
+		if(empty($phar)){
+			$phar = __DIR__.'/../../main.php';
+		}
+		$cwd = \testman\Finder::cwd();
+		$fixture_path = \testman\Conf::find_settings_path('fixture.php');
+		$lib_dir = \testman\Conf::find_settings_path('lib');
+		if($lib_dir !== null){
+			$lib_dir = realpath($lib_dir);
+		}
+		$resources_dir = \testman\Conf::find_settings_path('resources');
+		if($resources_dir !== null){
+			$resources_dir = realpath($resources_dir);
+		}
+
+		return '
+			error_reporting(E_ALL);
+			ini_set("display_errors", "Off");
+
+			chdir('.var_export($cwd, true).');
+
+			$bootstrap_files = ['.var_export($cwd, true).'."/bootstrap.php", '.var_export($cwd, true).'."/vendor/autoload.php"];
+			foreach($bootstrap_files as $f){
+				if(is_file($f)){
+					ob_start();
+					include_once($f);
+					ob_end_clean();
+					break;
+				}
+			}
+
+			try{
+				require_once('.var_export($phar, true).');
+
+				$resources_dir = '.var_export($resources_dir, true).';
+				if($resources_dir !== null){
+					\testman\Conf::set(["resources_dir" => $resources_dir]);
+				}
+
+				$lib_dir = '.var_export($lib_dir, true).';
+				if($lib_dir !== null){
+					$bs = chr(92);
+					spl_autoload_register(function($class) use ($lib_dir, $bs){
+						$cp = str_replace($bs,"/",(substr($class,0,1) == $bs ? substr($class,1) : $class));
+						if(strpos($cp,"test/") === 0 && is_file($f=($lib_dir."/".substr($cp,5).".php"))){
+							require_once($f);
+							if(class_exists($class,false) || interface_exists($class,false) || trait_exists($class,false)){
+								return true;
+							}
+						}
+						return false;
+					},true,false);
+				}
+
+				$fixture_path = '.var_export($fixture_path, true).';
+				if($fixture_path !== null){
+					ob_start();
+					include($fixture_path);
+					ob_end_clean();
+				}
+			}catch(\Throwable $e){
+				fwrite(STDERR, (string)$e);
+				exit(1);
+			}
+		';
+	}
+
+	/**
+	 * 並列実行の前に、worker スロット 1..N の環境を fixture で seed する（--seed-workers）。
+	 * 各スロットを TESTMAN_WORKER_ID=<slot> のサブプロセスで並列に実行する。
+	 * HTTP サーバを worker 毎に分ける構成（DB/ストレージも worker 毎）で、各 worker の
+	 * DB を事前に用意するのに使う。fixture が無ければ何もしない。
+	 */
+	private static function seed_workers(int $workers): void{
+		if(\testman\Conf::find_settings_path('fixture.php') === null){
+			return;
+		}
+		$code = self::get_seed_code();
+
+		$procs = [];
+		for($slot = 1; $slot <= $workers; $slot++){
+			$cmd = sprintf('TESTMAN_WORKER_ID=%d php -r %s', $slot, escapeshellarg($code));
+			$p = proc_open($cmd, [1 => ['pipe','w'], 2 => ['pipe','w']], $pipes);
+			if(is_resource($p)){
+				stream_set_blocking($pipes[2], false);
+				$procs[$slot] = ['proc' => $p, 'pipes' => $pipes, 'err' => ''];
+			}
+		}
+
+		$total = count($procs);
+		$done = 0;
+		$failed = [];
+		$spin = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏']; // スピナー（並列で動いてる感）
+		$tick = 0;
+		while(!empty($procs)){
+			foreach($procs as $slot => $job){
+				$procs[$slot]['err'] .= (string)stream_get_contents($job['pipes'][2]);
+				if(!proc_get_status($job['proc'])['running']){
+					$procs[$slot]['err'] .= (string)stream_get_contents($job['pipes'][2]);
+					fclose($job['pipes'][1]);
+					fclose($job['pipes'][2]);
+					if(proc_close($job['proc']) !== 0){
+						$failed[$slot] = $procs[$slot]['err'];
+					}
+					unset($procs[$slot]);
+					$done++;
+				}
+			}
+			// 毎ポーリングでスピナー＋バーを更新（完了を待つ間も回り続ける）
+			$w = 16; $f = (int)($done * $w / max($total, 1));
+			$bar = str_repeat('█', $f).str_repeat('░', $w - $f);
+			\testman\Std::p(sprintf("\r  \033[%sm%s\033[0m seeding worker envs \033[90m[\033[0m%s\033[90m]\033[0m %d/%d",
+				self::ANSI_CYAN, $spin[$tick % 10], $bar, $done, $total));
+			$tick++;
+			if(!empty($procs)){
+				usleep(80000);
+			}
+		}
+		\testman\Std::p("\r\033[2K");
+
+		if(!empty($failed)){
+			\testman\Std::println_danger(sprintf('Worker seeding failed on slot(s): %s', implode(', ', array_keys($failed))));
+			foreach($failed as $slot => $err){
+				\testman\Std::println_danger(sprintf('  [w%d] %s', $slot, substr(trim($err), 0, 300)));
+			}
+		}else{
+			\testman\Std::println(sprintf("  \033[%sm✓\033[0m seeded %d worker env(s)", self::ANSI_GREEN, $total));
+		}
 	}
 
 	/**
@@ -657,6 +854,7 @@ class Runner{
 			self::exec_setup_teardown($test_file,false);
 
 			self::$resultset[$test_name] = $res;
+			self::$test_paths[$test_name] = $test_file;
 			return [$test_name, $res];
 		}finally{
 			\testman\Conf::pop();
@@ -797,10 +995,12 @@ class Runner{
 		// カウンター
 		$counter = sprintf('[%d/%d]', $current, $total);
 
-		// ステータス (pass/fail)
+		// ステータス (pass/fail)。--retry 時は失敗を「後でリトライ ⟳」（黄）で見せる。
 		$status = "\033[".self::ANSI_GREEN."m".$pass." ✓\033[0m";
 		if($fail > 0){
-			$status .= " \033[".self::ANSI_RED."m".$fail." ✗\033[0m";
+			$fc = self::$retry_enabled ? self::ANSI_YELLOW : self::ANSI_RED;
+			$fm = self::$retry_enabled ? '⟳' : '✗';
+			$status .= " \033[".$fc."m".$fail." ".$fm."\033[0m";
 		}
 
 		// ファイル名（最後のディレクトリ/ファイル名のみ）
